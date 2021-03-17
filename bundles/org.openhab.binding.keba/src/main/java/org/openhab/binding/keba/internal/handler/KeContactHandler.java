@@ -16,7 +16,9 @@ import static org.openhab.binding.keba.internal.KebaBindingConstants.*;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -63,14 +65,16 @@ public class KeContactHandler extends BaseThingHandler {
 
     public static final String IP_ADDRESS = "ipAddress";
     public static final String POLLING_REFRESH_INTERVAL = "refreshInterval";
+    public static final int POLLING_REFRESH_INTERVAL_DEFAULT = 15;
     public static final int REPORT_INTERVAL = 3000;
-    public static final int PING_TIME_OUT = 3000;
     public static final int BUFFER_SIZE = 1024;
     public static final int REMOTE_PORT_NUMBER = 7090;
     private static final String CACHE_REPORT_1 = "REPORT_1";
     private static final String CACHE_REPORT_2 = "REPORT_2";
     private static final String CACHE_REPORT_3 = "REPORT_3";
     private static final String CACHE_REPORT_100 = "REPORT_100";
+    public static final int SOCKET_TIME_OUT_MS = 3000;
+    public static final int SOCKET_CHECK_PORT_NUMBER = 80;
 
     private final Logger logger = LoggerFactory.getLogger(KeContactHandler.class);
 
@@ -93,30 +97,49 @@ public class KeContactHandler extends BaseThingHandler {
 
     @Override
     public void initialize() {
-        if (getConfig().get(IP_ADDRESS) != null && !getConfig().get(IP_ADDRESS).equals("")) {
-            transceiver.registerHandler(this);
+        try {
+            if (isKebaReachable()) {
+                transceiver.registerHandler(this);
 
-            cache = new ExpiringCacheMap<>(
-                    Math.max((((BigDecimal) getConfig().get(POLLING_REFRESH_INTERVAL)).intValue()) - 5, 0) * 1000);
+                cache = new ExpiringCacheMap<>(
+                        Math.max((((BigDecimal) getConfig().get(POLLING_REFRESH_INTERVAL)).intValue()) - 5, 0) * 1000);
 
-            cache.put(CACHE_REPORT_1, () -> transceiver.send("report 1", getHandler()));
-            cache.put(CACHE_REPORT_2, () -> transceiver.send("report 2", getHandler()));
-            cache.put(CACHE_REPORT_3, () -> transceiver.send("report 3", getHandler()));
-            cache.put(CACHE_REPORT_100, () -> transceiver.send("report 100", getHandler()));
+                cache.put(CACHE_REPORT_1, () -> transceiver.send("report 1", getHandler()));
+                cache.put(CACHE_REPORT_2, () -> transceiver.send("report 2", getHandler()));
+                cache.put(CACHE_REPORT_3, () -> transceiver.send("report 3", getHandler()));
+                cache.put(CACHE_REPORT_100, () -> transceiver.send("report 100", getHandler()));
 
-            if (pollingJob == null || pollingJob.isCancelled()) {
-                try {
-                    pollingJob = scheduler.scheduleWithFixedDelay(pollingRunnable, 0,
-                            ((BigDecimal) getConfig().get(POLLING_REFRESH_INTERVAL)).intValue(), TimeUnit.SECONDS);
-                } catch (Exception e) {
-                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.NONE,
-                            "An exception occurred while scheduling the polling job");
+                if (pollingJob == null || pollingJob.isCancelled()) {
+                    try {
+                        pollingJob = scheduler.scheduleWithFixedDelay(pollingRunnable, 0,
+                                ((BigDecimal) getConfig().get(POLLING_REFRESH_INTERVAL)).intValue(), TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.NONE,
+                                "An exception occurred while scheduling the polling job");
+                    }
                 }
+            } else {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                        "IP address or port number not set");
             }
-        } else {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                    "IP address or port number not set");
+        } catch (IOException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                    "Exception during initialization of binding: " + e.toString());
         }
+    }
+
+    private boolean isKebaReachable() throws IOException {
+        boolean isReachable = false;
+        SocketAddress sockAddr = new InetSocketAddress(getIPAddress(), SOCKET_CHECK_PORT_NUMBER);
+        Socket socket = new Socket();
+        try {
+            socket.connect(sockAddr, SOCKET_TIME_OUT_MS);
+            isReachable = true;
+        } finally {
+            socket.close();
+        }
+        logger.debug("isKebaReachable() returns {}", isReachable);
+        return isReachable;
     }
 
     @Override
@@ -131,6 +154,12 @@ public class KeContactHandler extends BaseThingHandler {
 
     public String getIPAddress() {
         return getConfig().get(IP_ADDRESS) != null ? (String) getConfig().get(IP_ADDRESS) : "";
+    }
+
+    public int getRefreshInterval() {
+        return getConfig().get(POLLING_REFRESH_INTERVAL) != null
+                ? ((BigDecimal) getConfig().get(POLLING_REFRESH_INTERVAL)).intValue()
+                : POLLING_REFRESH_INTERVAL_DEFAULT;
     }
 
     private KeContactHandler getHandler() {
@@ -149,9 +178,10 @@ public class KeContactHandler extends BaseThingHandler {
 
     private Runnable pollingRunnable = () -> {
         try {
+            logger.debug("Running pollingRunnable to connect Keba wallbox");
             long stamp = System.currentTimeMillis();
-            if (!InetAddress.getByName(((String) getConfig().get(IP_ADDRESS))).isReachable(PING_TIME_OUT)) {
-                logger.debug("Ping timed out after '{}' milliseconds", System.currentTimeMillis() - stamp);
+            if (!isKebaReachable()) {
+                logger.debug("isKebaReachable() timed out after '{}' milliseconds", System.currentTimeMillis() - stamp);
                 transceiver.unRegisterHandler(getHandler());
             } else {
                 if (getThing().getStatus() == ThingStatus.ONLINE) {
