@@ -38,6 +38,7 @@ import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.binding.builder.ThingBuilder;
+import org.openhab.core.thing.type.ChannelGroupTypeUID;
 import org.openhab.core.thing.type.ChannelKind;
 import org.openhab.core.thing.type.ChannelTypeUID;
 import org.openhab.core.types.Command;
@@ -256,10 +257,16 @@ public class GuntamaticHandler extends BaseThingHandler {
                 }
             }
         }
+
         ThingBuilder thingBuilder = editThing();
+
+        ChannelGroupTypeUID channelGroupTypeUID = new ChannelGroupTypeUID("BINDING_ID", "monitor");
+        guntamaticChannelTypeProvider.addChannelGroupType(channelGroupTypeUID, "", "", "", false, "");
+
         thingBuilder.withoutChannels(channelList);
         thingBuilder.withChannels(channelList);
         updateThing(thingBuilder.build());
+
         initalized = true;
     }
 

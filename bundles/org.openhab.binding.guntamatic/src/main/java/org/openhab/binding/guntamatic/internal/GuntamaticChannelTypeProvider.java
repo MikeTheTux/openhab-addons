@@ -12,13 +12,23 @@
  */
 package org.openhab.binding.guntamatic.internal;
 
+import static org.openhab.binding.guntamatic.internal.GuntamaticBindingConstants.*;
+
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.core.thing.type.ChannelDefinition;
+import org.openhab.core.thing.type.ChannelDefinitionBuilder;
+import org.openhab.core.thing.type.ChannelGroupType;
+import org.openhab.core.thing.type.ChannelGroupTypeBuilder;
+import org.openhab.core.thing.type.ChannelGroupTypeProvider;
+import org.openhab.core.thing.type.ChannelGroupTypeUID;
 import org.openhab.core.thing.type.ChannelType;
 import org.openhab.core.thing.type.ChannelTypeBuilder;
 import org.openhab.core.thing.type.ChannelTypeProvider;
@@ -34,10 +44,13 @@ import org.slf4j.LoggerFactory;
  *
  * @author Weger Michael - Initial contribution
  */
-@Component(service = { ChannelTypeProvider.class, GuntamaticChannelTypeProvider.class })
+@Component(service = { ChannelTypeProvider.class, ChannelGroupTypeProvider.class, GuntamaticChannelTypeProvider.class })
 @NonNullByDefault
-public class GuntamaticChannelTypeProvider implements ChannelTypeProvider {
+public class GuntamaticChannelTypeProvider implements ChannelTypeProvider, ChannelGroupTypeProvider {
     private final Map<String, ChannelType> channelTypes = new ConcurrentHashMap<>();
+    private final Map<String, ChannelGroupType> channelGroupTypes = new ConcurrentHashMap<>();
+    private final List<ChannelDefinition> channelDefinitions = new ArrayList<ChannelDefinition>();
+
     private final Logger logger = LoggerFactory.getLogger(GuntamaticChannelTypeProvider.class);
 
     @Override
@@ -53,9 +66,24 @@ public class GuntamaticChannelTypeProvider implements ChannelTypeProvider {
         return null;
     }
 
+    @Override
+    public Collection<ChannelGroupType> getChannelGroupTypes(@Nullable Locale locale) {
+        return channelGroupTypes.values();
+    }
+
+    @Override
+    public @Nullable ChannelGroupType getChannelGroupType(ChannelGroupTypeUID channelGroupTypeUID,
+            @Nullable Locale locale) {
+        if (channelGroupTypes.containsKey(channelGroupTypeUID.getAsString())) {
+            return channelGroupTypes.get(channelGroupTypeUID.getAsString());
+        }
+        return null;
+    }
+
     public void addChannelType(ChannelTypeUID channelTypeUID, String label, String itemType, String description,
             boolean advanced, String pattern) {
         try {
+
             StateDescriptionFragmentBuilder stateDescriptionFragmentBuilder = StateDescriptionFragmentBuilder.create()
                     .withReadOnly(true);
             if (!pattern.isEmpty()) {
@@ -65,8 +93,22 @@ public class GuntamaticChannelTypeProvider implements ChannelTypeProvider {
                     .withDescription(description).isAdvanced(advanced)
                     .withStateDescriptionFragment(stateDescriptionFragmentBuilder.build());
             channelTypes.put(channelTypeUID.getAsString(), stateChannelTypeBuilder.build());
+
+            channelDefinitions.add(new ChannelDefinitionBuilder("foo", channelTypeUID).build());
         } catch (Exception e) {
             logger.warn("Failed creating channelType {}: {} ", channelTypeUID, e.getMessage());
+        }
+    }
+
+    public void addChannelGroupType(ChannelGroupTypeUID channelGroupTypeUID, String label, String itemType,
+            String description, boolean advanced, String pattern) {
+
+        try {
+            ChannelGroupType channelGroupType = ChannelGroupTypeBuilder.instance(channelGroupTypeUID, "Channel Group")
+                    .withDescription("Channel Group").withChannelDefinitions(channelDefinitions).build();
+            channelGroupTypes.put(channelGroupTypeUID.getAsString(), channelGroupType);
+        } catch (Exception e) {
+            logger.warn("Failed creating channelType {}: {} ", channelGroupTypeUID, e.getMessage());
         }
     }
 }
