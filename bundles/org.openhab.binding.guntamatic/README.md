@@ -14,7 +14,7 @@ Guntamatic Heating Systems supported as Thing Types:
 | Name          | Thing Type ID | Heating System Type  | Binding Development Status        |
 |---------------|---------------|----------------------|-----------------------------------|
 | Biostar       | `biostar`     | Pellets              | tested via 15kW, firmware 3.2d    |
-| Biosmart      | `biosmart`    | Logs                 | tested                            |
+| Biosmart      | `biosmart`    | Logs                 | tested via 22kW, firmware 3.2f    |
 | Powerchip     | `powerchip`   | WoodChips            | untested                          |
 | Powercorn     | `powercorn`   | EnergyGrain          | untested                          |
 | Biocom        | `biocom`      | Pellets              | untested                          |
