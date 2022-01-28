@@ -74,6 +74,8 @@ The Guntamatic Heating System can be controlled using the following channels:
 - `{"ack":"confirmation message"}` ... in case of success
 - `{"err":"error message"}`        ... in case of error
 
+The reaction of the Guntamatic Heating System can be monitored via the corresponding data channel. E.g. `programHc1` if you triggered `controlHeatCircProgram1`. The data channel gets updated with the next cyclic update (according to the `refreshInterval` configuration).
+
 ### Monitoring Channels
 
 The Binding dynamically generates Channels, derived from the data provided from the actual Guntamatic Heating System.
