@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010-2021 Contributors to the openHAB project
+ * Copyright (c) 2010-2022 Contributors to the openHAB project
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information.
@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
+
 package org.openhab.binding.speedtest.internal;
 
 import java.io.BufferedReader;
@@ -105,7 +106,6 @@ public class speedtestHandler extends BaseThingHandler {
         if (ch.equals(speedtestBindingConstants.TRIGGER_TEST)) {
             getSpeed();
         }
-
     }
 
     @Override
@@ -268,10 +268,11 @@ public class speedtestHandler extends BaseThingHandler {
     private void getSpeed() {
         logger.debug("Getting Speed Measurement");
         String postCommand = "";
-        if (!serverID.equals("")) {
+        if (!serverID.isBlank()) {
             postCommand = " -s " + serverID;
         }
-        ResultContainer tmpCont = doExecuteRequest(" -f json --accept-license" + postCommand, ResultContainer.class);
+        ResultContainer tmpCont = doExecuteRequest(" -f json --accept-license --accept-gdpr" + postCommand,
+                ResultContainer.class);
         if (tmpCont != null) {
             if (tmpCont.getType().equals("result")) {
                 ping_jitter = tmpCont.getPing().getJitter();
@@ -308,7 +309,7 @@ public class speedtestHandler extends BaseThingHandler {
                 return obj;
             }
         } catch (Exception e) {
-            logger.debug(e.getMessage(), e);
+            logger.debug("Exception: {}", e.getMessage());
         }
         return null;
     }
