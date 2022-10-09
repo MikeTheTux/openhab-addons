@@ -22,7 +22,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
  */
 @NonNullByDefault
 public class speedtestConfiguration {
-    public int refreshInterval;
+    public int refreshInterval = 60;
     public String execPath = "";
     public String serverID = "";
     public String speedTestVersion = "";

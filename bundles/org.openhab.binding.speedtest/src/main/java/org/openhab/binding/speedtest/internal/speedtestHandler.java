@@ -50,7 +50,7 @@ import com.google.gson.Gson;
 @NonNullByDefault
 public class speedtestHandler extends BaseThingHandler {
     private final Logger logger = LoggerFactory.getLogger(speedtestHandler.class);
-    private @Nullable speedtestConfiguration config;
+    private speedtestConfiguration config = new speedtestConfiguration();
     private Gson GSON = new Gson();
     private static Runtime rt = Runtime.getRuntime();
     private long pollingInterval = 1440;
@@ -293,7 +293,7 @@ public class speedtestHandler extends BaseThingHandler {
             }
         } else {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                    "Speedtest is not returning valid results. ");
+                    "Speedtest is not returning valid results.");
         }
     }
 
