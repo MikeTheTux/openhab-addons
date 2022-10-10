@@ -42,15 +42,15 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 
 /**
- * The {@link speedtestHandler} is responsible for handling commands, which are
+ * The {@link SpeedtestHandler} is responsible for handling commands, which are
  * sent to one of the channels.
  *
  * @author Brian Homeyer - Initial contribution
  */
 @NonNullByDefault
-public class speedtestHandler extends BaseThingHandler {
-    private final Logger logger = LoggerFactory.getLogger(speedtestHandler.class);
-    private speedtestConfiguration config = new speedtestConfiguration();
+public class SpeedtestHandler extends BaseThingHandler {
+    private final Logger logger = LoggerFactory.getLogger(SpeedtestHandler.class);
+    private SpeedtestConfiguration config = new SpeedtestConfiguration();
     private Gson GSON = new Gson();
     private static Runtime rt = Runtime.getRuntime();
     private long pollingInterval = 1440;
@@ -91,7 +91,7 @@ public class speedtestHandler extends BaseThingHandler {
         NOT_SET
     }
 
-    public speedtestHandler(Thing thing) {
+    public SpeedtestHandler(Thing thing) {
         super(thing);
     }
 
@@ -103,14 +103,14 @@ public class speedtestHandler extends BaseThingHandler {
             updateChannels();
             return;
         }
-        if (ch.equals(speedtestBindingConstants.TRIGGER_TEST)) {
+        if (ch.equals(SpeedtestBindingConstants.TRIGGER_TEST)) {
             getSpeed();
         }
     }
 
     @Override
     public void initialize() {
-        config = getConfigAs(speedtestConfiguration.class);
+        config = getConfigAs(SpeedtestConfiguration.class);
         pollingInterval = config.refreshInterval;
         serverID = config.serverID;
         if (!config.execPath.isEmpty()) {
@@ -224,34 +224,34 @@ public class speedtestHandler extends BaseThingHandler {
                 serverListTxt = "ID : " + server.id.toString() + " " + server.host + "( " + server.location + " )";
                 switch (id) {
                     case 1:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST1, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST1, serverListTxt);
                         break;
                     case 2:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST2, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST2, serverListTxt);
                         break;
                     case 3:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST3, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST3, serverListTxt);
                         break;
                     case 4:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST4, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST4, serverListTxt);
                         break;
                     case 5:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST5, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST5, serverListTxt);
                         break;
                     case 6:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST6, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST6, serverListTxt);
                         break;
                     case 7:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST7, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST7, serverListTxt);
                         break;
                     case 8:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST8, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST8, serverListTxt);
                         break;
                     case 9:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST9, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST9, serverListTxt);
                         break;
                     case 10:
-                        properties.replace(speedtestBindingConstants.PROPERTY_SERVER_LIST10, serverListTxt);
+                        properties.replace(SpeedtestBindingConstants.PROPERTY_SERVER_LIST10, serverListTxt);
                         break;
                 }
                 id++;
@@ -319,31 +319,31 @@ public class speedtestHandler extends BaseThingHandler {
      */
     private void updateChannels() {
         logger.debug("Updating channels");
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.PING_JITTER),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.PING_JITTER),
                 new DecimalType(ping_jitter));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.PING_LATENCY),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.PING_LATENCY),
                 new DecimalType(ping_latency));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.DOWNLOAD_BANDWIDTH),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.DOWNLOAD_BANDWIDTH),
                 new DecimalType(Double.parseDouble(download_bandwidth) / 125000));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.DOWNLOAD_BYTES),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.DOWNLOAD_BYTES),
                 new DecimalType(download_bytes));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.DOWNLOAD_ELAPSED),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.DOWNLOAD_ELAPSED),
                 new DecimalType(download_elapsed));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.UPLOAD_BANDWIDTH),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.UPLOAD_BANDWIDTH),
                 new DecimalType(Double.parseDouble(upload_bandwidth) / 125000));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.UPLOAD_BYTES),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.UPLOAD_BYTES),
                 new DecimalType(upload_bytes));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.UPLOAD_ELAPSED),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.UPLOAD_ELAPSED),
                 new DecimalType(upload_elapsed));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.INTERFACE_EXTERNALIP),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.INTERFACE_EXTERNALIP),
                 new StringType(String.valueOf(interface_externalIp)));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.INTERFACE_INTERNALIP),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.INTERFACE_INTERNALIP),
                 new StringType(String.valueOf(interface_internalIp)));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.ISP),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.ISP),
                 new StringType(String.valueOf(isp)));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.RESULT_URL),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.RESULT_URL),
                 new StringType(String.valueOf(result_url)));
-        updateState(new ChannelUID(getThing().getUID(), speedtestBindingConstants.SERVER),
+        updateState(new ChannelUID(getThing().getUID(), SpeedtestBindingConstants.SERVER),
                 new StringType(String.valueOf(server_name)));
     }
 

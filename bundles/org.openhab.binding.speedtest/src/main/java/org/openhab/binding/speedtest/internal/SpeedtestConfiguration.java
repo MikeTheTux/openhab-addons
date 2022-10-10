@@ -16,12 +16,12 @@ package org.openhab.binding.speedtest.internal;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
 /**
- * The {@link speedtestConfiguration} class contains fields mapping thing configuration parameters.
+ * The {@link SpeedtestConfiguration} class contains fields mapping thing configuration parameters.
  *
  * @author Brian Homeyer - Initial contribution
  */
 @NonNullByDefault
-public class speedtestConfiguration {
+public class SpeedtestConfiguration {
     public int refreshInterval = 60;
     public String execPath = "";
     public String serverID = "";

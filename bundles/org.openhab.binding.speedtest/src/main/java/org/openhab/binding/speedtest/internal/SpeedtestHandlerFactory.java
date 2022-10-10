@@ -13,7 +13,7 @@
 
 package org.openhab.binding.speedtest.internal;
 
-import static org.openhab.binding.speedtest.internal.speedtestBindingConstants.*;
+import static org.openhab.binding.speedtest.internal.SpeedtestBindingConstants.*;
 
 import java.util.Set;
 
@@ -27,14 +27,14 @@ import org.openhab.core.thing.binding.ThingHandlerFactory;
 import org.osgi.service.component.annotations.Component;
 
 /**
- * The {@link speedtestHandlerFactory} is responsible for creating things and thing
+ * The {@link SpeedtestHandlerFactory} is responsible for creating things and thing
  * handlers.
  *
  * @author Brian Homeyer - Initial contribution
  */
 @NonNullByDefault
 @Component(configurationPid = "binding.speedtest", service = ThingHandlerFactory.class)
-public class speedtestHandlerFactory extends BaseThingHandlerFactory {
+public class SpeedtestHandlerFactory extends BaseThingHandlerFactory {
 
     private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Set.of(THING_TYPE_SPEEDTEST);
 
@@ -48,7 +48,7 @@ public class speedtestHandlerFactory extends BaseThingHandlerFactory {
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
 
         if (THING_TYPE_SPEEDTEST.equals(thingTypeUID)) {
-            return new speedtestHandler(thing);
+            return new SpeedtestHandler(thing);
         }
 
         return null;

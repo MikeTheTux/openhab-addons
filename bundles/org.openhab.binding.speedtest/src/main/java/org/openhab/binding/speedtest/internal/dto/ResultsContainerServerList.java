@@ -19,7 +19,7 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * The {@link speedtestBindingConstants} class defines a container for the Speedtest server list.
+ * The {@link ResultsContainerServerList} class defines a container for the Speedtest server list.
  *
  * @author Brian Homeyer - Initial contribution
  */

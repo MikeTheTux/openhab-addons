@@ -21,13 +21,13 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.openhab.core.thing.ThingTypeUID;
 
 /**
- * The {@link speedtestBindingConstants} class defines common constants, which are
+ * The {@link SpeedtestBindingConstants} class defines common constants, which are
  * used across the whole binding.
  *
  * @author Brian Homeyer - Initial contribution
  */
 @NonNullByDefault
-public class speedtestBindingConstants {
+public class SpeedtestBindingConstants {
 
     private static final String BINDING_ID = "speedtest";
 
