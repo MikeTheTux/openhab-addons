@@ -42,19 +42,19 @@ public class SpeedtestBindingConstants {
 
     // Channels
     public static final String SERVER = "server";
-    public static final String PING_JITTER = "ping_jitter";
-    public static final String PING_LATENCY = "ping_latency";
-    public static final String DOWNLOAD_BANDWIDTH = "download_bandwidth";
-    public static final String DOWNLOAD_BYTES = "download_bytes";
-    public static final String DOWNLOAD_ELAPSED = "download_elapsed";
-    public static final String UPLOAD_BANDWIDTH = "upload_bandwidth";
-    public static final String UPLOAD_BYTES = "upload_bytes";
-    public static final String UPLOAD_ELAPSED = "upload_elapsed";
+    public static final String PING_JITTER = "pingJitter";
+    public static final String PING_LATENCY = "pingLatency";
+    public static final String DOWNLOAD_BANDWIDTH = "downloadBandwidth";
+    public static final String DOWNLOAD_BYTES = "downloadBytes";
+    public static final String DOWNLOAD_ELAPSED = "downloadElapsed";
+    public static final String UPLOAD_BANDWIDTH = "uploadBandwidth";
+    public static final String UPLOAD_BYTES = "uploadBytes";
+    public static final String UPLOAD_ELAPSED = "uploadElapsed";
     public static final String ISP = "isp";
-    public static final String INTERFACE_INTERNALIP = "interface_internalIp";
-    public static final String INTERFACE_EXTERNALIP = "interface_externalIp";
-    public static final String RESULT_URL = "result_url";
-    public static final String TRIGGER_TEST = "trigger_test";
+    public static final String INTERFACE_INTERNALIP = "interfaceInternalIp";
+    public static final String INTERFACE_EXTERNALIP = "interfaceExternalIp";
+    public static final String RESULT_URL = "resultUrl";
+    public static final String TRIGGER_TEST = "triggerTest";
 
     public static final String PROPERTY_SERVER_LIST1 = "Server List 1";
     public static final String PROPERTY_SERVER_LIST2 = "Server List 2";

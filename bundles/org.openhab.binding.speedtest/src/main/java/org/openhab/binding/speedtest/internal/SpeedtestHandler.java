@@ -134,7 +134,7 @@ public class SpeedtestHandler extends BaseThingHandler {
 
         if (!checkConfig(speedTestCommand)) { // check the config
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                    "Speedtest Executable not found.   Please check configuration.");
+                    "Speedtest executable not found. Please check configuration.");
             return;
         }
         if (!getSpeedTestVersion()) {
@@ -150,7 +150,7 @@ public class SpeedtestHandler extends BaseThingHandler {
      * This is called to start the refresh job and also to reset that refresh job when a config change is done.
      */
     private void onUpdate() {
-        logger.debug("Polling Interval Set : {} ", pollingInterval);
+        logger.debug("Polling Interval Set: {} ", pollingInterval);
         if (pollingInterval > 0) {
             if (pollingJob == null || pollingJob.isCancelled()) {
                 pollingJob = scheduler.scheduleWithFixedDelay(pollingRunnable, 0, pollingInterval, TimeUnit.MINUTES);
@@ -195,15 +195,15 @@ public class SpeedtestHandler extends BaseThingHandler {
      */
     private boolean getSpeedTestVersion() {
         String versionString = doExecuteRequest(" -V", String.class);
-        if ((versionString!= null) && !versionString.isEmpty()) {
+        if (!versionString.isEmpty()) {
             int newLI = versionString.indexOf("\n");
             String versionLine = versionString.substring(0, newLI);
             if (versionString.indexOf("Speedtest by Ookla") > -1) {
-                logger.debug("Speedtest Version: {}", versionLine);
+                logger.debug("Speedtest Version : {}", versionLine);
                 return true;
             } else {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                        "Speedtest version not recognized, Ookla version REQUIRED. Please check configuration.");
+                        "Speedtest version not recognized, Speedtest from Ookla is REQUIRED. Please check configuration.");
                 return false;
             }
         }
@@ -297,7 +297,7 @@ public class SpeedtestHandler extends BaseThingHandler {
         }
     }
 
-    private @Nullable <T> T doExecuteRequest(String arguments, Class<T> type) {
+    private <T> T doExecuteRequest(String arguments, Class<T> type) {
         try {
             String dataOut = executeCmd(speedTestCommand + arguments);
             if (type != String.class) {
@@ -395,7 +395,7 @@ public class SpeedtestHandler extends BaseThingHandler {
         try {
             proc = rt.exec(cmdArray);
         } catch (Exception e) {
-            logger.debug("An exception occurred while executing '{}' : '{}'", Arrays.asList(cmdArray), e.getMessage());
+            logger.debug("An exception occurred while executing '{}': '{}'", Arrays.asList(cmdArray), e.getMessage());
             return "";
         }
 
@@ -408,7 +408,7 @@ public class SpeedtestHandler extends BaseThingHandler {
                 logger.debug("Exec [{}]: '{}'", "OUTPUT", line);
             }
         } catch (IOException e) {
-            logger.warn("An exception occurred while reading the stdout when executing '{}' : '{}'", commandLine,
+            logger.warn("An exception occurred while reading the stdout when executing '{}': '{}'", commandLine,
                     e.getMessage());
         }
 
@@ -416,7 +416,7 @@ public class SpeedtestHandler extends BaseThingHandler {
         try {
             exitVal = proc.waitFor(timeOut, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
-            logger.debug("An exception occurred while waiting for the process ('{}') to finish : '{}'", commandLine,
+            logger.debug("An exception occurred while waiting for the process ('{}') to finish: '{}'", commandLine,
                     e.getMessage());
         }
 
@@ -451,15 +451,9 @@ public class SpeedtestHandler extends BaseThingHandler {
         } else {
             logger.debug("Splitting by spaces");
             try {
-                    String[] splitCmd = commandLine.split(" ");
-                    if (splitCmd != null) {
-                        return splitCmd;
-                    }
-                    else {
-                        return new String[] {};
-                    }
+                return commandLine.split(" ");
             } catch (PatternSyntaxException e) {
-                logger.warn("An exception occurred while splitting '{}' : '{}'", commandLine, e.getMessage());
+                logger.warn("An exception occurred while splitting '{}': '{}'", commandLine, e.getMessage());
                 return new String[] {};
             }
         }
