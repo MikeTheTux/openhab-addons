@@ -195,15 +195,15 @@ public class SpeedtestHandler extends BaseThingHandler {
      */
     private boolean getSpeedTestVersion() {
         String versionString = doExecuteRequest(" -V", String.class);
-        if (!versionString.isEmpty()) {
+        if ((versionString!= null) && !versionString.isEmpty()) {
             int newLI = versionString.indexOf("\n");
             String versionLine = versionString.substring(0, newLI);
             if (versionString.indexOf("Speedtest by Ookla") > -1) {
-                logger.debug("Speedtest Version : {}", versionLine);
+                logger.debug("Speedtest Version: {}", versionLine);
                 return true;
             } else {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                        "Speedtest version not recognized, Ookla version REQUIRED.  Please check configuration.");
+                        "Speedtest version not recognized, Ookla version REQUIRED. Please check configuration.");
                 return false;
             }
         }
@@ -297,7 +297,7 @@ public class SpeedtestHandler extends BaseThingHandler {
         }
     }
 
-    private <T> T doExecuteRequest(String arguments, Class<T> type) {
+    private @Nullable <T> T doExecuteRequest(String arguments, Class<T> type) {
         try {
             String dataOut = executeCmd(speedTestCommand + arguments);
             if (type != String.class) {
@@ -451,7 +451,13 @@ public class SpeedtestHandler extends BaseThingHandler {
         } else {
             logger.debug("Splitting by spaces");
             try {
-                return commandLine.split(" ");
+                    String[] splitCmd = commandLine.split(" ");
+                    if (splitCmd != null) {
+                        return splitCmd;
+                    }
+                    else {
+                        return new String[] {};
+                    }
             } catch (PatternSyntaxException e) {
                 logger.warn("An exception occurred while splitting '{}' : '{}'", commandLine, e.getMessage());
                 return new String[] {};
