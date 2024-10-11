@@ -16,8 +16,8 @@ import static org.openhab.binding.automower.internal.AutomowerBindingConstants.*
 
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -107,6 +107,9 @@ public class AutomowerHandler extends BaseThingHandler {
         if (RefreshType.REFRESH == command) {
             logger.debug("Refreshing channel '{}'", channelUID);
             refreshChannels(channelUID);
+        } else if (CHANNEL_CALENDAR_TASKS.equals(channelUID.getId())) {
+            logger.debug("Sending calendar '{}'", command);
+            sendAutomowerCalendar(command.toString());
         } else {
             AutomowerCommand.fromChannelUID(channelUID).ifPresent(commandName -> {
                 logger.debug("Sending command '{}'", commandName);
@@ -269,6 +272,29 @@ public class AutomowerHandler extends BaseThingHandler {
         updateAutomowerState();
     }
 
+    /**
+     * Sends a calendar to the automower
+     *
+     * @param calendar The calendar that should be sent. It is using the same json structure (start, duration, ...)
+     *            as provided when reading the channel
+     */
+    public void sendAutomowerCalendar(String calendar) {
+        logger.debug("Sending calendar '{}'", calendar);
+        String id = automowerId.get();
+        try {
+            AutomowerBridge automowerBridge = getAutomowerBridge();
+            if (automowerBridge != null) {
+                automowerBridge.sendAutomowerCalendar(id, calendar);
+            } else {
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "@text/conf-error-no-bridge");
+            }
+        } catch (AutomowerCommunicationException e) {
+            logger.warn("Unable to send calendar to automower: {}, Error: {}", id, e.getMessage());
+        }
+
+        updateAutomowerState();
+    }
+
     private String restrictedState(RestrictedReason reason) {
         return "RESTRICTED_" + reason.name();
     }
@@ -308,7 +334,7 @@ public class AutomowerHandler extends BaseThingHandler {
                 updateState(CHANNEL_PLANNER_NEXT_START, new DateTimeType(toZonedDateTime(nextStartTimestamp)));
             }
             updateState(CHANNEL_PLANNER_OVERRIDE_ACTION,
-                    new StringType(mower.getAttributes().getPlanner().getOverride().getAction()));
+                    new StringType(mower.getAttributes().getPlanner().getOverride().getAction().name()));
 
             updateState(CHANNEL_CALENDAR_TASKS,
                     new StringType(gson.toJson(mower.getAttributes().getCalendar().getTasks())));
@@ -316,7 +342,7 @@ public class AutomowerHandler extends BaseThingHandler {
             updateState(LAST_POSITION,
                     new PointType(new DecimalType(mower.getAttributes().getLastPosition().getLatitude()),
                             new DecimalType(mower.getAttributes().getLastPosition().getLongitude())));
-            ArrayList<Position> positions = mower.getAttributes().getPositions();
+            List<Position> positions = mower.getAttributes().getPositions();
             for (int i = 0; i < positions.size(); i++) {
                 updateState(CHANNEL_POSITIONS.get(i), new PointType(new DecimalType(positions.get(i).getLatitude()),
                         new DecimalType(positions.get(i).getLongitude())));
