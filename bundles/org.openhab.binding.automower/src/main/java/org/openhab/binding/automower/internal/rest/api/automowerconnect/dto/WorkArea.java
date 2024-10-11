@@ -16,18 +16,18 @@ package org.openhab.binding.automower.internal.rest.api.automowerconnect.dto;
  * @author Markus Pfleger - Initial contribution
  */
 public class WorkArea {
-    private int workAreaId;
+    private long workAreaId;
     private String name;
     private int cuttingHeight;
     private Boolean enabled;
     private int progress; // Only available for EPOS mowers and systematic mowing work areas.
     private long lastTimeCompleted;
 
-    public int getWorkAreaId() {
+    public long getWorkAreaId() {
         return workAreaId;
     }
 
-    public void setWorkAreaId(int workAreaId) {
+    public void setWorkAreaId(long workAreaId) {
         this.workAreaId = workAreaId;
     }
 
