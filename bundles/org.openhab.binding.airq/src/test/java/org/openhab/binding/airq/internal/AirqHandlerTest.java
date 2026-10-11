@@ -256,6 +256,31 @@ class AirqHandlerTest {
     }
 
     @ParameterizedTest
+    @CsvSource({ "nightModeStartDay, 08:00, StartDay", "nightModeStartNight, 22:30, StartNight",
+            "nightModeStartDay, 00:00, StartDay", "nightModeStartNight, 23:59, StartNight",
+            "general#nightModeStartDay, 08:00, StartDay", "general#nightModeStartNight, 22:30, StartNight" })
+    void stringClockCommandsPreserveLegacyAndGroupedChannels(String channel, String clock, String key)
+            throws Exception {
+        JsonObject settings = requireNonNull(sendSettings(new ChannelUID(thingUID, channel), new StringType(clock)));
+
+        assertThat(settings.getAsJsonObject("NightMode").get(key).getAsString(), is(clock));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "24:00", "08:60", "invalid", "08:00:30", "8:00", "480", "" })
+    void malformedStringClockCommandsDoNotSendRequests(String clock) throws Exception {
+        for (String channel : List.of("nightModeStartDay", "nightModeStartNight", "general#nightModeStartDay",
+                "general#nightModeStartNight")) {
+            assertThat(sendSettings(new ChannelUID(thingUID, channel), new StringType(clock)), nullValue());
+        }
+    }
+
+    @Test
+    void measurementDelayRejectsStringClockCommands() throws Exception {
+        assertThat(sendSettings("averagingRhythm", new StringType("08:00")), nullValue());
+    }
+
+    @ParameterizedTest
     @CsvSource({ "00:00, 0", "08:00, 480", "23:59, 1439" })
     void clockReadingsUseMinutesSinceMidnight(String clock, int minutes) throws Exception {
         readConfiguration("{\"NightMode\": {\"StartDay\": \"" + clock + "\"}}");
@@ -320,6 +345,10 @@ class AirqHandlerTest {
     }
 
     private @Nullable JsonObject sendSettings(String channel, Command command) throws Exception {
+        return sendSettings(new ChannelUID(thingUID, "general#" + channel), command);
+    }
+
+    private @Nullable JsonObject sendSettings(ChannelUID channel, Command command) throws Exception {
         List<String> requests = new ArrayList<>();
         String password = "secret";
         JsonObject response = new JsonObject();
@@ -333,7 +362,7 @@ class AirqHandlerTest {
             }
         };
         commandHandler.config.password = password;
-        commandHandler.handleCommand(new ChannelUID(thingUID, "general#" + channel), command);
+        commandHandler.handleCommand(channel, command);
         if (requests.isEmpty()) {
             return null;
         }

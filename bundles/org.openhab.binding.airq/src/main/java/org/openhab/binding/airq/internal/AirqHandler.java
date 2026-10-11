@@ -403,7 +403,15 @@ public class AirqHandler extends BaseThingHandler {
         boolean measurementDelay = "averagingRhythm".equals(channelId);
         Unit<?> unit = measurementDelay ? Units.SECOND : Units.MINUTE;
         BigDecimal value;
-        if (command instanceof QuantityType<?> quantity) {
+        if (!measurementDelay && command instanceof StringType clockCommand) {
+            try {
+                value = BigDecimal
+                        .valueOf(LocalTime.parse(clockCommand.toString(), CLOCK_TIME_FORMAT).toSecondOfDay() / 60);
+            } catch (DateTimeParseException e) {
+                logger.debug("Ignoring malformed clock time command for channel {}", channelId);
+                return;
+            }
+        } else if (command instanceof QuantityType<?> quantity) {
             QuantityType<?> converted = quantity.toUnit(unit);
             if (converted == null) {
                 logger.debug("Ignoring incompatible time unit for channel {}", channelId);

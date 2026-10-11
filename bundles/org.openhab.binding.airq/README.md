@@ -245,8 +245,8 @@ Number:Temperature    airQ_temperature            "Temperature"                 
 DateTime              airQ_timestamp              "TimeStamp [%1$td.%1$tm.%1$tY %1$tH:%1$tM]"                            {channel="airq:airq:1:measurements#timestamp"}
 Number:Dimensionless  airQ_voc                    "VOC concentration"                     {unit="ppb",channel="airq:airq:1:measurements#tvoc"}
 Number:Time           airQ_uptime                 "Uptime"                                {unit="s",channel="airq:airq:1:general#uptime"}
-Number:Dimensionless  airQ_Virus_free             "Virus-Free index"                      {unit="%",channel="airq:airq:1:virus_free"}
-Number:Dimensionless  airQ_Mold_free              "Mold-Free index"                       {unit="%",channel="airq:airq:1:mold_free"}
+Number:Dimensionless  airQ_Virus_free             "Virus-Free index"                      {unit="%",channel="airq:airq:1:measurements#virus_free"}
+Number:Dimensionless  airQ_Mold_free              "Mold-Free index"                       {unit="%",channel="airq:airq:1:measurements#mold_free"}
 
 Number:Dimensionless  airQ_cnt03_maxerr        "Maximum error of Fine Dust >0,3 µm"             {channel="airq:airq:1:maxerr#cnt0_3_maxerr"}
 Number:Dimensionless  airQ_cnt05_maxerr        "Maximum error of Fine Dust >0,5 µm"             {channel="airq:airq:1:maxerr#cnt0_5_maxerr"}
@@ -269,8 +269,8 @@ Number:Dimensionless  airQ_so2_maxerr          "Maximum error of SO2 concentrati
 Number:Dimensionless  airQ_sound_maxerr        "Maximum error of Noise"                         {channel="airq:airq:1:maxerr#sound_maxerr"}
 Number:Dimensionless  airQ_temperature_maxerr  "Maximum error of Temperature"                   {channel="airq:airq:1:maxerr#temperature_maxerr"}
 Number:Dimensionless  airQ_voc_maxerr          "Maximum error of VOC concentration"             {channel="airq:airq:1:maxerr#tvoc_maxerr"}
-Number:Dimensionless  airQ_virus_free_maxerr   "Maximum error of Virus-Free"                    {unit="%",channel="airq:airq:1:virus_free_maxerr"}
-Number:Dimensionless  airQ_mold_free_maxerr    "Maximum error of Mold-Free"                     {unit="%",channel="airq:airq:1:mold_free_maxerr"}
+Number:Dimensionless  airQ_virus_free_maxerr   "Maximum error of Virus-Free"                    {unit="%",channel="airq:airq:1:maxerr#virus_free_maxerr"}
+Number:Dimensionless  airQ_mold_free_maxerr    "Maximum error of Mold-Free"                     {unit="%",channel="airq:airq:1:maxerr#mold_free_maxerr"}
 
 Switch airQ_wifi                    "WLAN on or off"                                 {channel="airq:airq:1:general#wifi"}
 String airQ_SSID                    "WLAN SSID"                                      {channel="airq:airq:1:general#ssid"}
