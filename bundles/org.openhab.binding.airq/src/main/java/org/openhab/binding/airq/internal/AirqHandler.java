@@ -61,12 +61,14 @@ import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.library.unit.SIUnits;
 import org.openhab.core.library.unit.Units;
+import org.openhab.core.thing.Channel;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.types.Command;
+import org.openhab.core.types.State;
 import org.openhab.core.types.UnDefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -392,6 +394,12 @@ public class AirqHandler extends BaseThingHandler {
     public void initialize() {
         config = getConfigAs(AirqConfiguration.class);
         updateStatus(ThingStatus.UNKNOWN);
+
+        if (getThing().getChannels().stream().anyMatch(channel -> channel.getUID().getGroupId() == null)) {
+            logger.info(
+                    "Thing {} has deprecated flat air-Q channels. They remain supported for compatibility; migrate Item links to grouped channels as described in the binding README.",
+                    getThing().getUID());
+        }
 
         pollingJob = scheduler.scheduleWithFixedDelay(this::pollData, 0, POLLING_PERIOD_DATA_MSEC,
                 TimeUnit.MILLISECONDS);
@@ -893,9 +901,28 @@ public class AirqHandler extends BaseThingHandler {
         }
     }
 
-    private void updateMappedState(String channelId, org.openhab.core.types.State state) {
+    private void updateMappedState(String channelId, State state) {
         if (!channelId.endsWith("#")) {
             updateState(channelId, state);
+            String legacyId = rawChannelId(channelId);
+            Channel legacyChannel = getThing().getChannel(legacyId);
+            if (!legacyId.equals(channelId) && legacyChannel != null) {
+                State legacyState = state;
+                if (state instanceof QuantityType<?> quantity) {
+                    if ("String".equals(legacyChannel.getAcceptedItemType())
+                            && ("nightModeStartDay".equals(legacyId) || "nightModeStartNight".equals(legacyId))) {
+                        QuantityType<?> minutes = quantity.toUnit(Units.MINUTE);
+                        if (minutes != null) {
+                            legacyState = new StringType(
+                                    LocalTime.ofSecondOfDay(minutes.intValue() * 60).format(CLOCK_TIME_FORMAT));
+                        }
+                    } else if ("averagingRhythm".equals(legacyId)
+                            && "Number".equals(legacyChannel.getAcceptedItemType())) {
+                        legacyState = new DecimalType(quantity.toBigDecimal());
+                    }
+                }
+                updateState(legacyId, legacyState);
+            }
         }
     }
 

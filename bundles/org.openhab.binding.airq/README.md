@@ -48,6 +48,12 @@ Legacy Maximum Error channels use the `_maxerr` suffix.
 The advanced gas, relative-pressure, and maximum-noise channels introduced in Thing version 5 use the `-maxerr` suffix.
 Channels are grouped into General, Measurements, Advanced Measurements, Maximum Errors, and Advanced Maximum Errors.
 
+Existing Things retain their flat channels and Item links when upgraded to Thing version 5.
+Flat channels are deprecated; use the grouped channels for new configurations and migrate existing Item links.
+Those channels continue receiving states, including their legacy time representations.
+To use grouped channels, update the Item links explicitly; links are not automatically moved to the new channel UIDs.
+The binding logs a deprecation notice during initialization if flat channels are present.
+
 The rw column is empty if the channel is only readable, w if the channel can be written and rw if it allows both to be read and written.
 
 | channel                  | type                             | rw  | description                                                                            |

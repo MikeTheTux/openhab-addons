@@ -56,6 +56,7 @@ import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.thing.ThingStatusInfo;
 import org.openhab.core.thing.ThingUID;
 import org.openhab.core.thing.binding.ThingHandlerCallback;
+import org.openhab.core.thing.binding.builder.ChannelBuilder;
 import org.openhab.core.thing.binding.builder.ThingBuilder;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.UnDefType;
@@ -299,9 +300,13 @@ class AirqHandlerTest {
     }
 
     private void readConfiguration(String payload) throws Exception {
+        readConfiguration(thing, payload);
+    }
+
+    private void readConfiguration(Thing configuredThing, String payload) throws Exception {
         JsonObject response = new JsonObject();
         response.addProperty("content", handler.encrypt(payload.getBytes(StandardCharsets.UTF_8), ""));
-        AirqHandler configurationHandler = new AirqHandler(thing, requireNonNull(mock(HttpClient.class))) {
+        AirqHandler configurationHandler = new AirqHandler(configuredThing, requireNonNull(mock(HttpClient.class))) {
             @Override
             protected Result getData(String address, String method, @Nullable String body) {
                 assertThat(method, is("GET"));
@@ -372,9 +377,70 @@ class AirqHandlerTest {
     }
 
     private void poll(String payload) throws Exception {
-        AirqHandler pollingHandler = requireNonNull(spy(handler));
+        poll(thing, payload);
+    }
+
+    private void poll(Thing configuredThing, String payload) throws Exception {
+        AirqHandler pollingHandler = requireNonNull(
+                spy(new AirqHandler(configuredThing, requireNonNull(mock(HttpClient.class)))));
+        pollingHandler.setCallback(callback);
         doReturn(payload).when(pollingHandler).getDecryptedContentString(anyString(), eq("GET"), isNull());
         pollingHandler.pollData();
+    }
+
+    @Test
+    void retainedFlatMeasurementChannelsReceiveStatesAlongsideGroupedChannels() throws Exception {
+        Thing legacyThing = ThingBuilder.create(THING_TYPE_AIRQ, thingUID)
+                .withChannels(ChannelBuilder.create(new ChannelUID(thingUID, "co"), "Number").build(),
+                        ChannelBuilder.create(new ChannelUID(thingUID, "co_maxerr"), "Number").build(),
+                        ChannelBuilder.create(new ChannelUID(thingUID, "measurements#co"), "Number").build(),
+                        ChannelBuilder.create(new ChannelUID(thingUID, "maxerr#co_maxerr"), "Number").build())
+                .build();
+
+        poll(legacyThing, "{\"co\": [12.5, 0.25]}");
+
+        for (String channel : List.of("co", "measurements#co")) {
+            requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, channel), new DecimalType(12.5f));
+        }
+        for (String channel : List.of("co_maxerr", "maxerr#co_maxerr")) {
+            requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, channel), new DecimalType(0.25f));
+        }
+        assertThat(
+                mockingDetails(callback).getInvocations().stream()
+                        .filter(invocation -> invocation.getMethod().getName().equals("stateUpdated"))
+                        .map(invocation -> invocation.getArgument(0, ChannelUID.class)).toList(),
+                not(hasItem(new ChannelUID(thingUID, "temperature"))));
+    }
+
+    @Test
+    void retainedFlatTimeChannelsPreserveLegacyRepresentationsAndRecover() throws Exception {
+        Thing legacyThing = ThingBuilder.create(THING_TYPE_AIRQ, thingUID)
+                .withChannels(ChannelBuilder.create(new ChannelUID(thingUID, "nightModeStartDay"), "String").build(),
+                        ChannelBuilder.create(new ChannelUID(thingUID, "nightModeStartNight"), "String").build(),
+                        ChannelBuilder.create(new ChannelUID(thingUID, "averagingRhythm"), "Number").build(),
+                        ChannelBuilder.create(new ChannelUID(thingUID, "uptime"), "Number:Time").build())
+                .build();
+
+        readConfiguration(legacyThing, "{\"NightMode\": {\"StartDay\": \"24:00\", \"StartNight\": \"invalid\"}}");
+        for (String channel : List.of("nightModeStartDay", "nightModeStartNight")) {
+            requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, channel), UnDefType.UNDEF);
+        }
+        readConfiguration(legacyThing,
+                "{\"SecondsMeasurementDelay\": 5, \"NightMode\": {\"StartDay\": \"08:00\", \"StartNight\": \"23:59\"}}");
+
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "nightModeStartDay"),
+                new StringType("08:00"));
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "nightModeStartNight"),
+                new StringType("23:59"));
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "averagingRhythm"), new DecimalType(5));
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#nightModeStartDay"),
+                new QuantityType<>(480, Units.MINUTE));
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#averagingRhythm"),
+                new QuantityType<>(5, Units.SECOND));
+
+        poll(legacyThing, "{\"uptime\": 123}");
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "uptime"),
+                new QuantityType<>(123, Units.SECOND));
     }
 
     static Stream<Arguments> measurements() {
