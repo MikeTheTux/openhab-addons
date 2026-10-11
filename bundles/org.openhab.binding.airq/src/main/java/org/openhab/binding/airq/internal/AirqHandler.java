@@ -28,6 +28,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -102,6 +103,57 @@ public class AirqHandler extends BaseThingHandler {
             this(dataKey, channelId, "measurement", unit, "advanced-measurements");
         }
     }
+
+    private static final Map<String, String> CHANNEL_IDS = Map.ofEntries(
+            Map.entry("fineDustCnt00_3_maxerr", "fine-dust-cnt00-3-maxerr"),
+            Map.entry("fineDustCnt00_5_maxerr", "fine-dust-cnt00-5-maxerr"),
+            Map.entry("fineDustCnt01_maxerr", "fine-dust-cnt01-maxerr"),
+            Map.entry("fineDustCnt02_5_maxerr", "fine-dust-cnt02-5-maxerr"),
+            Map.entry("fineDustCnt05_maxerr", "fine-dust-cnt05-maxerr"),
+            Map.entry("fineDustCnt10_maxerr", "fine-dust-cnt10-maxerr"), Map.entry("co_maxerr", "co-maxerr"),
+            Map.entry("co2_maxerr", "co2-maxerr"), Map.entry("dewpt_maxerr", "dewpt-maxerr"),
+            Map.entry("h2s_maxerr", "h2s-maxerr"), Map.entry("humidityRelative_maxerr", "humidity-relative-maxerr"),
+            Map.entry("humidityAbsolute_maxerr", "humidity-absolute-maxerr"), Map.entry("no2_maxerr", "no2-maxerr"),
+            Map.entry("o3_maxerr", "o3-maxerr"), Map.entry("o2_maxerr", "o2-maxerr"),
+            Map.entry("fineDustConc01_maxerr", "fine-dust-conc01-maxerr"),
+            Map.entry("fineDustConc02_5_maxerr", "fine-dust-conc02-5-maxerr"),
+            Map.entry("fineDustConc10_maxerr", "fine-dust-conc10-maxerr"),
+            Map.entry("pressure_maxerr", "pressure-maxerr"), Map.entry("so2_maxerr", "so2-maxerr"),
+            Map.entry("sound_maxerr", "sound-maxerr"), Map.entry("temperature_maxerr", "temperature-maxerr"),
+            Map.entry("tvoc_maxerr", "tvoc-maxerr"), Map.entry("virus_free_maxerr", "virus-free-maxerr"),
+            Map.entry("mold_free_maxerr", "mold-free-maxerr"), Map.entry("radon_maxerr", "radon-maxerr"),
+            Map.entry("avgFineDustSize", "avg-fine-dust-size"), Map.entry("fineDustCnt00_3", "fine-dust-cnt00-3"),
+            Map.entry("fineDustCnt00_5", "fine-dust-cnt00-5"), Map.entry("fineDustCnt01", "fine-dust-cnt01"),
+            Map.entry("fineDustCnt02_5", "fine-dust-cnt02-5"), Map.entry("fineDustCnt05", "fine-dust-cnt05"),
+            Map.entry("fineDustCnt10", "fine-dust-cnt10"), Map.entry("dCO2dt", "d-co2dt"), Map.entry("dHdt", "d-hdt"),
+            Map.entry("doorEvent", "door-event"), Map.entry("healthIndex", "health-index"),
+            Map.entry("humidityRelative", "humidity-relative"), Map.entry("humidityAbsolute", "humidity-absolute"),
+            Map.entry("measureTime", "measure-time"), Map.entry("performanceIndex", "performance-index"),
+            Map.entry("fineDustConc01", "fine-dust-conc01"), Map.entry("fineDustConc02_5", "fine-dust-conc02-5"),
+            Map.entry("fineDustConc10", "fine-dust-conc10"), Map.entry("virus_free", "virus-free"),
+            Map.entry("mold_free", "mold-free"), Map.entry("wifiInfo", "wifi-info"),
+            Map.entry("timeServer", "time-server"), Map.entry("nightModeStartDay", "night-mode-start-day"),
+            Map.entry("nightModeStartNight", "night-mode-start-night"),
+            Map.entry("nightModeBrightnessDay", "night-mode-brightness-day"),
+            Map.entry("nightModeBrightnessNight", "night-mode-brightness-night"),
+            Map.entry("nightModeFanNightOff", "night-mode-fan-night-off"),
+            Map.entry("nightModeWifiNightOff", "night-mode-wifi-night-off"), Map.entry("deviceName", "device-name"),
+            Map.entry("roomType", "room-type"), Map.entry("logLevel", "log-level"),
+            Map.entry("deleteKey", "delete-key"), Map.entry("fireAlarm", "fire-alarm"),
+            Map.entry("wlanConfigGateway", "wlan-config-gateway"), Map.entry("wlanConfigMac", "wlan-config-mac"),
+            Map.entry("wlanConfigSsid", "wlan-config-ssid"), Map.entry("wlanConfigIPAddress", "wlan-config-ip-address"),
+            Map.entry("wlanConfigNetMask", "wlan-config-net-mask"), Map.entry("wlanConfigBssid", "wlan-config-bssid"),
+            Map.entry("cloudUpload", "cloud-upload"), Map.entry("averagingRhythm", "averaging-rhythm"),
+            Map.entry("powerFreqSuppression", "power-freq-suppression"),
+            Map.entry("autoDriftCompensation", "auto-drift-compensation"), Map.entry("autoUpdate", "auto-update"),
+            Map.entry("advancedDataProcessing", "advanced-data-processing"), Map.entry("ppm_and_ppb", "ppm-and-ppb"),
+            Map.entry("gasAlarm", "gas-alarm"), Map.entry("soundPressure", "sound-pressure"),
+            Map.entry("alarmForwarding", "alarm-forwarding"), Map.entry("userCalib", "user-calib"),
+            Map.entry("initialCalFinished", "initial-cal-finished"), Map.entry("errorBars", "error-bars"),
+            Map.entry("warmupPhase", "warmup-phase"));
+
+    private static final Map<String, String> LEGACY_CHANNEL_IDS = CHANNEL_IDS.entrySet().stream()
+            .collect(Collectors.toUnmodifiableMap(Map.Entry::getValue, Map.Entry::getKey));
 
     private static final List<ChannelMapping> MEASUREMENTS = List.of(
             new ChannelMapping("cnt0_3", "fineDustCnt00_3", "pair"),
@@ -236,7 +288,7 @@ public class AirqHandler extends BaseThingHandler {
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        String channelId = channelUID.getIdWithoutGroup();
+        String channelId = legacyChannelId(channelUID.getIdWithoutGroup());
         if ("averagingRhythm".equals(channelId) || "nightModeStartDay".equals(channelId)
                 || "nightModeStartNight".equals(channelId)) {
             handleTimeCommand(channelId, command);
@@ -245,7 +297,7 @@ public class AirqHandler extends BaseThingHandler {
         if ((command instanceof OnOffType) || (command instanceof StringType)) {
             JsonObject newobj = new JsonObject();
             JsonObject subjson = new JsonObject();
-            switch (channelUID.getIdWithoutGroup()) {
+            switch (channelId) {
                 case "wifi":
                     // we do not allow to switch off Wifi because otherwise we can't connect to the air-Q device anymore
                     break;
@@ -324,7 +376,7 @@ public class AirqHandler extends BaseThingHandler {
                     }
                     break;
                 case "timeServer":
-                    newobj.addProperty(channelUID.getIdWithoutGroup(), command.toString());
+                    newobj.addProperty(channelId, command.toString());
                     changeSettings(newobj);
                     break;
                 case "location":
@@ -903,7 +955,11 @@ public class AirqHandler extends BaseThingHandler {
 
     private void updateMappedState(String channelId, State state) {
         if (!channelId.endsWith("#")) {
-            updateState(channelId, state);
+            String currentChannelId = groupedChannelId(channelId);
+            updateState(currentChannelId, state);
+            if (!currentChannelId.equals(channelId) && getThing().getChannel(channelId) != null) {
+                updateState(channelId, state);
+            }
             String legacyId = rawChannelId(channelId);
             Channel legacyChannel = getThing().getChannel(legacyId);
             if (!legacyId.equals(channelId) && legacyChannel != null) {
@@ -924,6 +980,20 @@ public class AirqHandler extends BaseThingHandler {
                 updateState(legacyId, legacyState);
             }
         }
+    }
+
+    private static String groupedChannelId(String channelId) {
+        int separator = channelId.indexOf('#');
+        if (separator < 0) {
+            return channelId;
+        }
+        String legacyId = rawChannelId(channelId);
+        return channelId.substring(0, separator + 1) + CHANNEL_IDS.getOrDefault(legacyId, legacyId);
+    }
+
+    private static String legacyChannelId(String channelId) {
+        String legacyId = LEGACY_CHANNEL_IDS.get(channelId);
+        return legacyId != null ? legacyId : channelId;
     }
 
     private static String nestedChannel(String parentChannelId, String channelId) {

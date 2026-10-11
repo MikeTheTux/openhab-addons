@@ -83,20 +83,20 @@ class AirqHandlerTest {
     }
 
     static Stream<Arguments> legacyPairs() {
-        return Stream.concat(
-                Stream.of(new String[] { "cnt0_3", "fineDustCnt00_3" }, new String[] { "cnt0_5", "fineDustCnt00_5" },
-                        new String[] { "cnt1", "fineDustCnt01" }, new String[] { "cnt2_5", "fineDustCnt02_5" },
-                        new String[] { "cnt5", "fineDustCnt05" }, new String[] { "cnt10", "fineDustCnt10" },
+        return Stream.concat(Stream
+                .of(new String[] { "cnt0_3", "fine-dust-cnt00-3" }, new String[] { "cnt0_5", "fine-dust-cnt00-5" },
+                        new String[] { "cnt1", "fine-dust-cnt01" }, new String[] { "cnt2_5", "fine-dust-cnt02-5" },
+                        new String[] { "cnt5", "fine-dust-cnt05" }, new String[] { "cnt10", "fine-dust-cnt10" },
                         new String[] { "co", "co" }, new String[] { "dewpt", "dewpt" }, new String[] { "h2s", "h2s" },
-                        new String[] { "humidity", "humidityRelative" },
-                        new String[] { "humidity_abs", "humidityAbsolute" }, new String[] { "no2", "no2" },
+                        new String[] { "humidity", "humidity-relative" },
+                        new String[] { "humidity_abs", "humidity-absolute" }, new String[] { "no2", "no2" },
                         new String[] { "o3", "o3" }, new String[] { "oxygen", "o2" },
-                        new String[] { "pm1", "fineDustConc01" }, new String[] { "pm2_5", "fineDustConc02_5" },
-                        new String[] { "pm10", "fineDustConc10" }, new String[] { "pressure", "pressure" },
+                        new String[] { "pm1", "fine-dust-conc01" }, new String[] { "pm2_5", "fine-dust-conc02-5" },
+                        new String[] { "pm10", "fine-dust-conc10" }, new String[] { "pressure", "pressure" },
                         new String[] { "radon", "radon" }, new String[] { "so2", "so2" },
-                        new String[] { "temperature", "temperature" }, new String[] { "virus", "virus_free" },
-                        new String[] { "mold", "mold_free" })
-                        .map(mapping -> Arguments.of(mapping[0], mapping[1], null)),
+                        new String[] { "temperature", "temperature" }, new String[] { "virus", "virus-free" },
+                        new String[] { "mold", "mold-free" })
+                .map(mapping -> Arguments.of(mapping[0], mapping[1], null)),
                 Stream.of(Arguments.of("co2", "co2", Units.PARTS_PER_MILLION),
                         Arguments.of("tvoc", "tvoc", Units.PARTS_PER_BILLION),
                         Arguments.of("sound", "sound", Units.DECIBEL)));
@@ -109,7 +109,7 @@ class AirqHandlerTest {
 
         requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "measurements#" + channel),
                 unit == null ? new DecimalType(12.5f) : new QuantityType<>(12.5f, unit));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "maxerr#" + channel + "_maxerr"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "maxerr#" + channel + "-maxerr"),
                 new DecimalType(0.25f));
     }
 
@@ -122,8 +122,8 @@ class AirqHandlerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "TypPS, avgFineDustSize", "dCO2dt, dCO2dt", "dHdt, dHdt", "door_event, doorEvent", "health, health",
-            "performance, performance" })
+    @CsvSource({ "TypPS, avg-fine-dust-size", "dCO2dt, d-co2dt", "dHdt, d-hdt", "door_event, door-event",
+            "health, health", "performance, performance" })
     void preservesLegacyScalarMappings(String key, String channel) throws Exception {
         poll("{\"" + key + "\": 125}");
 
@@ -132,7 +132,7 @@ class AirqHandlerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "health, healthIndex", "performance, performanceIndex" })
+    @CsvSource({ "health, health-index", "performance, performance-index" })
     void publishesBothRawAndScaledIndices(String key, String channel) throws Exception {
         poll("{\"" + key + "\": 855}");
 
@@ -158,16 +158,16 @@ class AirqHandlerTest {
     void preservesLegacyMissingValueBehavior(String payload) throws Exception {
         poll(payload);
 
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "measurements#humidityRelative"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "measurements#humidity-relative"),
                 UnDefType.UNDEF);
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "maxerr#humidityRelative_maxerr"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "maxerr#humidity-relative-maxerr"),
                 UnDefType.UNDEF);
         requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "measurements#co2"), UnDefType.UNDEF);
         assertThat(
                 mockingDetails(callback).getInvocations().stream()
                         .filter(invocation -> invocation.getMethod().getName().equals("stateUpdated"))
                         .map(invocation -> invocation.getArgument(0, ChannelUID.class)).toList(),
-                allOf(not(hasItem(new ChannelUID(thingUID, "maxerr#co2_maxerr"))),
+                allOf(not(hasItem(new ChannelUID(thingUID, "maxerr#co2-maxerr"))),
                         not(hasItem(new ChannelUID(thingUID, "advanced-measurements#ch2o-m10")))));
     }
 
@@ -208,30 +208,30 @@ class AirqHandlerTest {
                 new StringType("first, second"));
         requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#password"),
                 new StringType("password"));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#timeServer"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#time-server"),
                 new StringType("time.example"));
         requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#location"),
                 new PointType(new DecimalType(50f), new DecimalType(10f)));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#deviceName"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#device-name"),
                 new StringType("device"));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#averagingRhythm"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#averaging-rhythm"),
                 new QuantityType<>(5, Units.SECOND));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#nightModeStartDay"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#night-mode-start-day"),
                 new QuantityType<>(480, Units.MINUTE));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#nightModeStartNight"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#night-mode-start-night"),
                 new QuantityType<>(1350, Units.MINUTE));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#powerFreqSuppression"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#power-freq-suppression"),
                 new StringType("50Hz+60Hz"));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#nightModeBrightnessNight"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#night-mode-brightness-night"),
                 new DecimalType(2));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#nightModeFanNightOff"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#night-mode-fan-night-off"),
                 OnOffType.ON);
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#wlanConfigMac"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#wlan-config-mac"),
                 new StringType("mac"));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#wlanConfigIPAddress"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#wlan-config-ip-address"),
                 new StringType("ip"));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#autoUpdate"), OnOffType.ON);
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#warmupPhase"), OnOffType.OFF);
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#auto-update"), OnOffType.ON);
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#warmup-phase"), OnOffType.OFF);
         assertThat(thing.getProperties(),
                 allOf(hasEntry("hardwareVersion", "\"hardware\""), hasEntry("sensorList", "co2, sound"),
                         hasEntry("Industry", "true"), hasEntry("id", "\"device-id\""),
@@ -242,13 +242,13 @@ class AirqHandlerTest {
     void measurementDurationUsesMilliseconds() throws Exception {
         poll("{\"measuretime\": 2006}");
 
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "measurements#measureTime"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "measurements#measure-time"),
                 new QuantityType<>(2006, MetricPrefix.MILLI(Units.SECOND)));
     }
 
     @ParameterizedTest
-    @CsvSource({ "nightModeStartDay, 480 min, StartDay, 08:00", "nightModeStartNight, 81000 s, StartNight, 22:30",
-            "nightModeStartDay, 0 min, StartDay, 00:00", "nightModeStartNight, 1439 min, StartNight, 23:59" })
+    @CsvSource({ "night-mode-start-day, 480 min, StartDay, 08:00", "night-mode-start-night, 81000 s, StartNight, 22:30",
+            "night-mode-start-day, 0 min, StartDay, 00:00", "night-mode-start-night, 1439 min, StartNight, 23:59" })
     void timeCommandsAreEncodedAsDeviceClockTimes(String channel, String command, String key, String expected)
             throws Exception {
         JsonObject settings = requireNonNull(sendSettings(channel, QuantityType.valueOf(command)));
@@ -259,7 +259,7 @@ class AirqHandlerTest {
     @ParameterizedTest
     @CsvSource({ "nightModeStartDay, 08:00, StartDay", "nightModeStartNight, 22:30, StartNight",
             "nightModeStartDay, 00:00, StartDay", "nightModeStartNight, 23:59, StartNight",
-            "general#nightModeStartDay, 08:00, StartDay", "general#nightModeStartNight, 22:30, StartNight" })
+            "general#night-mode-start-day, 08:00, StartDay", "general#night-mode-start-night, 22:30, StartNight" })
     void stringClockCommandsPreserveLegacyAndGroupedChannels(String channel, String clock, String key)
             throws Exception {
         JsonObject settings = requireNonNull(sendSettings(new ChannelUID(thingUID, channel), new StringType(clock)));
@@ -270,8 +270,8 @@ class AirqHandlerTest {
     @ParameterizedTest
     @ValueSource(strings = { "24:00", "08:60", "invalid", "08:00:30", "8:00", "480", "" })
     void malformedStringClockCommandsDoNotSendRequests(String clock) throws Exception {
-        for (String channel : List.of("nightModeStartDay", "nightModeStartNight", "general#nightModeStartDay",
-                "general#nightModeStartNight")) {
+        for (String channel : List.of("nightModeStartDay", "nightModeStartNight", "general#night-mode-start-day",
+                "general#night-mode-start-night")) {
             assertThat(sendSettings(new ChannelUID(thingUID, channel), new StringType(clock)), nullValue());
         }
     }
@@ -286,7 +286,7 @@ class AirqHandlerTest {
     void clockReadingsUseMinutesSinceMidnight(String clock, int minutes) throws Exception {
         readConfiguration("{\"NightMode\": {\"StartDay\": \"" + clock + "\"}}");
 
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#nightModeStartDay"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#night-mode-start-day"),
                 new QuantityType<>(minutes, Units.MINUTE));
     }
 
@@ -295,7 +295,7 @@ class AirqHandlerTest {
     void invalidClockReadingsBecomeUndefined(String clock) throws Exception {
         readConfiguration("{\"NightMode\": {\"StartDay\": \"" + clock + "\"}}");
 
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#nightModeStartDay"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#night-mode-start-day"),
                 UnDefType.UNDEF);
     }
 
@@ -320,15 +320,15 @@ class AirqHandlerTest {
 
     @Test
     void plainNumericTimeCommandsUseChannelUnits() throws Exception {
-        JsonObject day = requireNonNull(sendSettings("nightModeStartDay", new DecimalType(480)));
+        JsonObject day = requireNonNull(sendSettings("night-mode-start-day", new DecimalType(480)));
         assertThat(day.getAsJsonObject("NightMode").get("StartDay").getAsString(), is("08:00"));
-        JsonObject delay = requireNonNull(sendSettings("averagingRhythm", new DecimalType(5)));
+        JsonObject delay = requireNonNull(sendSettings("averaging-rhythm", new DecimalType(5)));
         assertThat(delay.get("SecondsMeasurementDelay").getAsInt(), is(5));
     }
 
     @Test
     void measurementDelayCommandUsesSeconds() throws Exception {
-        JsonObject settings = requireNonNull(sendSettings("averagingRhythm", new QuantityType<>(2, Units.MINUTE)));
+        JsonObject settings = requireNonNull(sendSettings("averaging-rhythm", new QuantityType<>(2, Units.MINUTE)));
 
         assertThat(settings.get("SecondsMeasurementDelay").getAsInt(), is(120));
     }
@@ -336,15 +336,15 @@ class AirqHandlerTest {
     @ParameterizedTest
     @ValueSource(strings = { "50Hz", "60Hz", "50Hz+60Hz" })
     void suppressionCommandsPreserveAllDeviceModes(String mode) throws Exception {
-        JsonObject settings = requireNonNull(sendSettings("powerFreqSuppression", new StringType(mode)));
+        JsonObject settings = requireNonNull(sendSettings("power-freq-suppression", new StringType(mode)));
 
         assertThat(settings.get("Rejection").getAsString(), is(mode));
     }
 
     @ParameterizedTest
-    @CsvSource({ "nightModeStartDay, -1 min", "nightModeStartDay, 1440 min", "nightModeStartNight, 0.5 min",
-            "averagingRhythm, -1 s", "averagingRhythm, 1.5 s", "averagingRhythm, 2147483648 s",
-            "nightModeStartDay, 2 Hz" })
+    @CsvSource({ "night-mode-start-day, -1 min", "night-mode-start-day, 1440 min", "night-mode-start-night, 0.5 min",
+            "averaging-rhythm, -1 s", "averaging-rhythm, 1.5 s", "averaging-rhythm, 2147483648 s",
+            "night-mode-start-day, 2 Hz" })
     void invalidNumericSettingsDoNotSendRequests(String channel, String command) throws Exception {
         assertThat(sendSettings(channel, QuantityType.valueOf(command)), nullValue());
     }
@@ -394,7 +394,7 @@ class AirqHandlerTest {
                 .withChannels(ChannelBuilder.create(new ChannelUID(thingUID, "co"), "Number").build(),
                         ChannelBuilder.create(new ChannelUID(thingUID, "co_maxerr"), "Number").build(),
                         ChannelBuilder.create(new ChannelUID(thingUID, "measurements#co"), "Number").build(),
-                        ChannelBuilder.create(new ChannelUID(thingUID, "maxerr#co_maxerr"), "Number").build())
+                        ChannelBuilder.create(new ChannelUID(thingUID, "maxerr#co-maxerr"), "Number").build())
                 .build();
 
         poll(legacyThing, "{\"co\": [12.5, 0.25]}");
@@ -402,7 +402,7 @@ class AirqHandlerTest {
         for (String channel : List.of("co", "measurements#co")) {
             requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, channel), new DecimalType(12.5f));
         }
-        for (String channel : List.of("co_maxerr", "maxerr#co_maxerr")) {
+        for (String channel : List.of("co_maxerr", "maxerr#co-maxerr")) {
             requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, channel), new DecimalType(0.25f));
         }
         assertThat(
@@ -433,14 +433,47 @@ class AirqHandlerTest {
         requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "nightModeStartNight"),
                 new StringType("23:59"));
         requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "averagingRhythm"), new DecimalType(5));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#nightModeStartDay"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#night-mode-start-day"),
                 new QuantityType<>(480, Units.MINUTE));
-        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#averagingRhythm"),
+        requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "general#averaging-rhythm"),
                 new QuantityType<>(5, Units.SECOND));
 
         poll(legacyThing, "{\"uptime\": 123}");
         requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, "uptime"),
                 new QuantityType<>(123, Units.SECOND));
+    }
+
+    @Test
+    void renamedMeasurementChannelsKeepOriginalFlatIds() throws Exception {
+        Thing legacyThing = ThingBuilder.create(THING_TYPE_AIRQ, thingUID).withChannels(
+                ChannelBuilder.create(new ChannelUID(thingUID, "humidityRelative"), "Number").build(),
+                ChannelBuilder.create(new ChannelUID(thingUID, "humidityRelative_maxerr"), "Number").build(),
+                ChannelBuilder.create(new ChannelUID(thingUID, "measurements#humidityRelative"), "Number").build(),
+                ChannelBuilder.create(new ChannelUID(thingUID, "maxerr#humidityRelative_maxerr"), "Number").build(),
+                ChannelBuilder.create(new ChannelUID(thingUID, "measurements#humidity-relative"), "Number").build(),
+                ChannelBuilder.create(new ChannelUID(thingUID, "maxerr#humidity-relative-maxerr"), "Number").build())
+                .build();
+
+        poll(legacyThing, "{\"humidity\": [45, 0.5]}");
+
+        for (String channel : List.of("humidityRelative", "measurements#humidityRelative",
+                "measurements#humidity-relative")) {
+            requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, channel), new DecimalType(45));
+        }
+        for (String channel : List.of("humidityRelative_maxerr", "maxerr#humidityRelative_maxerr",
+                "maxerr#humidity-relative-maxerr")) {
+            requireNonNull(verify(callback)).stateUpdated(new ChannelUID(thingUID, channel), new DecimalType(0.5));
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "wifiInfo, WifiInfo", "general#wifi-info, WifiInfo", "fireAlarm, FireAlarm",
+            "general#fire-alarm, FireAlarm", "cloudUpload, cloudUpload", "general#cloud-upload, cloudUpload" })
+    void renamedCommandsAndLegacyCommandsUseOriginalDeviceKeys(String channel, String key) throws Exception {
+        JsonObject settings = requireNonNull(sendSettings(new ChannelUID(thingUID, channel), OnOffType.ON));
+
+        assertThat(settings.size(), is(1));
+        assertThat(settings.get(key).getAsBoolean(), is(true));
     }
 
     static Stream<Arguments> measurements() {
@@ -495,22 +528,35 @@ class AirqHandlerTest {
             assertThat("Missing channel group " + groupId, group, notNullValue());
             group = requireNonNull(group);
             assertThat(group.hasAttribute("advanced"), is(false));
-            channels.addAll(elements(group, "channels/channel"));
+            List<Element> groupChannels = elements(group, "channels/channel");
+            List<String> channelIds = groupChannels.stream().map(channel -> channel.getAttribute("id")).toList();
+            assertThat(channelIds.stream().distinct().count(), is((long) channelIds.size()));
+            for (Element channel : groupChannels) {
+                assertThat(channel.getAttribute("id"), matchesPattern("[a-z0-9]+(?:-[a-z0-9]+)*"));
+                assertThat(channel.getAttribute("typeId"), matchesPattern("[a-z0-9]+(?:-[a-z0-9]+)*"));
+            }
+            channels.addAll(groupChannels);
             assertThat(findElement(metadata,
                     "//thing-type/channel-groups/channel-group[@id='" + groupId + "' and @typeId='" + groupId + "']"),
                     notNullValue());
         }
+        List<Element> channelTypes = elements(metadata, "//channel-type");
+        List<String> typeIds = channelTypes.stream().map(type -> type.getAttribute("id")).toList();
+        assertThat(typeIds.stream().distinct().count(), is((long) typeIds.size()));
+        for (Element instructionType : elements(upgrades, "//instruction-set/*/type")) {
+            String typeId = instructionType.getTextContent().substring("airq:".length());
+            assertThat("Missing historical channel type " + typeId,
+                    findElement(metadata, "//channel-type[@id='" + typeId + "']"), notNullValue());
+        }
 
         assertThat(elements(upgrades, "//instruction-set[@targetVersion='5']/remove-channel"), empty());
-        List<Element> legacyMoves = elements(upgrades, "//instruction-set[@targetVersion='5']/update-channel");
-        assertThat(legacyMoves, hasSize(101));
-        for (Element move : legacyMoves) {
-            Element definition = element(metadata, "//channel-group-type[@id='" + move.getAttribute("groupIds")
-                    + "']/channels/channel[@id='" + move.getAttribute("id") + "']");
-            assertThat(element(move, "type").getTextContent(), is("airq:" + definition.getAttribute("typeId")));
-        }
+        assertThat(elements(upgrades, "//instruction-set[@targetVersion='5']/update-channel"), empty());
+        assertThat(elements(upgrades, "//instruction-set[@targetVersion='6']"), empty());
         List<Element> additions = elements(upgrades, "//instruction-set[@targetVersion='5']/add-channel");
-        assertThat(additions, hasSize(61));
+        assertThat(additions, hasSize(162));
+        List<String> addedIds = additions.stream()
+                .map(addition -> addition.getAttribute("groupIds") + "#" + addition.getAttribute("id")).toList();
+        assertThat(addedIds.stream().distinct().count(), is((long) channels.size()));
         for (Element addition : additions) {
             String id = addition.getAttribute("id");
             String groupId = addition.getAttribute("groupIds");
@@ -532,14 +578,14 @@ class AirqHandlerTest {
         doReturn(new AirqHandler.Result(response.toString(), 200)).when(commandHandler).getData(anyString(), eq("POST"),
                 anyString());
 
-        commandHandler.handleCommand(new ChannelUID(thingUID, "general#wifiInfo"), OnOffType.ON);
+        commandHandler.handleCommand(new ChannelUID(thingUID, "general#wifi-info"), OnOffType.ON);
 
         requireNonNull(verify(commandHandler)).getData(anyString(), eq("POST"), anyString());
     }
 
     @ParameterizedTest
-    @CsvSource({ "SecondsMeasurementDelay, s", "mtime, ms", "uptime, s", "nightmodeStartDay, min",
-            "nightmodeStartNight, min" })
+    @CsvSource({ "seconds-measurement-delay, s", "mtime, ms", "uptime, s", "nightmode-start-day, min",
+            "nightmode-start-night, min" })
     void timeChannelTypesHaveMatchingUnitHints(String typeId, String unit) throws Exception {
         Element itemType = element(xml("thing/thing-types.xml"), "//channel-type[@id='" + typeId + "']/item-type");
 
@@ -553,10 +599,8 @@ class AirqHandlerTest {
                 "//channel-group-type[@id='general']/channels/channel[@id='uptime']"), notNullValue());
         assertThat(findElement(xml("thing/thing-types.xml"),
                 "//channel-group-type[@id='measurements']/channels/channel[@id='uptime']"), nullValue());
-        assertThat(
-                element(xml("update/update.xml"), "//instruction-set[@targetVersion='5']/update-channel[@id='uptime']")
-                        .getAttribute("groupIds"),
-                is("general"));
+        assertThat(element(xml("update/update.xml"), "//instruction-set[@targetVersion='5']/add-channel[@id='uptime']")
+                .getAttribute("groupIds"), is("general"));
     }
 
     private static Document xml(String resource) throws Exception {
