@@ -144,6 +144,20 @@ class BMWCarDataVehicleHandlerTest {
     }
 
     @Test
+    void publishesCopiesOnce() {
+        handler.updateTelematicData(Map.of(MILEAGE, value(200, "km", "2026-10-01T10:00:00Z")));
+        // the stream delivers many messages twice
+        handler.updateTelematicData(Map.of(MILEAGE, value(200, "km", "2026-10-01T10:00:00Z")));
+        verify(callback, times(1)).stateUpdated(channel("range#mileage"), QuantityType.valueOf("200 km"));
+
+        // a new reading with the same value, and another value with the same timestamp, are published
+        handler.updateTelematicData(Map.of(MILEAGE, value(200, "km", "2026-10-01T10:05:00Z")));
+        handler.updateTelematicData(Map.of(MILEAGE, value(201, "km", "2026-10-01T10:05:00Z")));
+        verify(callback, times(2)).stateUpdated(channel("range#mileage"), QuantityType.valueOf("200 km"));
+        verifyState("range#mileage", QuantityType.valueOf("201 km"));
+    }
+
+    @Test
     void combinesLatitudeAndLongitudeOfSeparateMessages() {
         handler.updateTelematicData(Map.of(LATITUDE, value(48.17, null, "2026-10-01T10:00:00Z")));
         verify(callback, never()).stateUpdated(eq(channel(CHANNEL_GPS)), any());
