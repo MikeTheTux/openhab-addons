@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -56,6 +57,8 @@ import org.openhab.core.types.State;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.JsonElement;
+
 /**
  * The {@link BMWCarDataVehicleHandler} publishes the telematic data of a vehicle, which is either pushed by the
  * stream of the account or polled from the REST API.
@@ -73,8 +76,11 @@ public class BMWCarDataVehicleHandler extends BaseThingHandler {
     private @Nullable ScheduledFuture<?> propertiesJob;
     // states by channel id, to answer REFRESH commands without spending API requests
     private final Map<String, State> states = new ConcurrentHashMap<>();
-    // timestamps of the latest values by descriptor, to drop values older than already published ones
+    // timestamps and values of the latest values by descriptor, to drop values older than already published ones and
+    // copies: the stream delivers many messages twice
+    private final Object descriptorLock = new Object();
     private final Map<String, Instant> descriptorTimestamps = new ConcurrentHashMap<>();
+    private final Map<String, JsonElement> descriptorValues = new ConcurrentHashMap<>();
     // guarded by this
     private @Nullable BigDecimal latitude;
     private @Nullable BigDecimal longitude;
@@ -145,7 +151,7 @@ public class BMWCarDataVehicleHandler extends BaseThingHandler {
             }
             Instant timestamp = parseTimestamp(value.timestamp);
             if (timestamp != null) {
-                if (!isNewer(descriptor, timestamp)) {
+                if (!isNewer(descriptor, timestamp, value.value)) {
                     continue;
                 }
                 if (newest == null || timestamp.isAfter(newest)) {
@@ -278,10 +284,25 @@ public class BMWCarDataVehicleHandler extends BaseThingHandler {
         newStates.forEach(this::publish);
     }
 
-    private boolean isNewer(String descriptor, Instant timestamp) {
-        Instant latest = descriptorTimestamps.merge(descriptor, timestamp,
-                (previous, current) -> current.isBefore(previous) ? previous : current);
-        return timestamp.equals(latest);
+    /**
+     * Records the value when it is newer than the last one of the descriptor. A value with the same timestamp and value
+     * as the last one is a copy, which the stream delivers for many messages, and is not published again.
+     */
+    private boolean isNewer(String descriptor, Instant timestamp, @Nullable JsonElement value) {
+        synchronized (descriptorLock) {
+            Instant previous = descriptorTimestamps.get(descriptor);
+            if (previous != null && (timestamp.isBefore(previous)
+                    || (timestamp.equals(previous) && Objects.equals(value, descriptorValues.get(descriptor))))) {
+                return false;
+            }
+            descriptorTimestamps.put(descriptor, timestamp);
+            if (value != null) {
+                descriptorValues.put(descriptor, value);
+            } else {
+                descriptorValues.remove(descriptor);
+            }
+            return true;
+        }
     }
 
     private void publish(String channelUid, State state) {
