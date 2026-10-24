@@ -130,6 +130,8 @@ public class BMWCarDataAccountHandler extends BaseBridgeHandler implements Strea
     // latest tokens, updated whenever the OAuth client service imports or refreshes them
     private volatile @Nullable Tokens tokens;
     private volatile boolean authorized;
+    // the device authorization the user has to confirm, shown on the authorization page
+    private volatile @Nullable DeviceAuthorization pendingAuthorization;
     private volatile @Nullable StreamSource streamSource;
     private volatile @Nullable StreamMirror mirror;
     // whether the local broker of the mirror is connected, null if not known yet
@@ -195,6 +197,7 @@ public class BMWCarDataAccountHandler extends BaseBridgeHandler implements Strea
         api = new BMWCarDataApi(httpClient, gson, this::getAccessToken, budget);
         disposed = false;
         authorized = false;
+        pendingAuthorization = null;
         budgetExhausted = null;
         streamState = null;
         mirrorConnected = null;
@@ -225,6 +228,24 @@ public class BMWCarDataAccountHandler extends BaseBridgeHandler implements Strea
         storage.remove(STORAGE_KEY_CONTAINER);
         // the request budget is kept, as BMW keeps counting the requests of the account
         super.handleRemoval();
+    }
+
+    /**
+     * @return the device authorization the user has to confirm, {@code null} if none is pending
+     */
+    public @Nullable DeviceAuthorization getPendingAuthorization() {
+        DeviceAuthorization authorization = pendingAuthorization;
+        if (authorization == null || disposed || authorized || authorization.isExpired(Instant.now())) {
+            return null;
+        }
+        return authorization;
+    }
+
+    /**
+     * @return whether the account is authorized at BMW
+     */
+    public boolean isAuthorized() {
+        return authorized && !disposed;
     }
 
     private String oAuthHandle() {
@@ -659,10 +680,12 @@ public class BMWCarDataAccountHandler extends BaseBridgeHandler implements Strea
             return;
         }
         authorized = false;
+        pendingAuthorization = null;
         try {
             DeviceAuthorization authorization = authClient.requestDeviceCode();
-            updateOfflineIfActive(ThingStatusDetail.CONFIGURATION_PENDING, "@text/offline.authorization-pending [\""
-                    + authorization.verificationUri() + "\", \"" + authorization.userCode() + "\"]");
+            pendingAuthorization = authorization;
+            // the Main UI links to the authorization page, which shows the link to BMW, a QR code of it and the code
+            updateOfflineIfActive(ThingStatusDetail.CONFIGURATION_PENDING, "@text/offline.authorization-pending");
             scheduleAuthJob(() -> pollDeviceAuthorization(authorization, authorization.interval()),
                     authorization.interval());
         } catch (BMWCarDataException e) {
@@ -696,8 +719,10 @@ public class BMWCarDataAccountHandler extends BaseBridgeHandler implements Strea
                 scheduleAuthJob(() -> pollDeviceAuthorization(authorization, slowerInterval), slowerInterval);
             }
             case EXPIRED -> startDeviceAuthorization();
-            case DENIED ->
+            case DENIED -> {
+                pendingAuthorization = null;
                 updateOfflineIfActive(ThingStatusDetail.CONFIGURATION_ERROR, "@text/offline.conf-error.access-denied");
+            }
             case AUTHORIZED -> {
                 if (newTokens != null) {
                     importTokens(newTokens);
@@ -734,6 +759,7 @@ public class BMWCarDataAccountHandler extends BaseBridgeHandler implements Strea
             return;
         }
         authorized = true;
+        pendingAuthorization = null;
         scheduleTokenRefresh(current);
         updateOnlineStatus();
         startStream(current);
