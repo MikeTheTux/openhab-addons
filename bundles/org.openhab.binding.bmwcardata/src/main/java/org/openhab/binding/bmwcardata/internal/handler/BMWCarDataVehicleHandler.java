@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
@@ -316,12 +317,16 @@ public class BMWCarDataVehicleHandler extends BaseThingHandler {
      * after the stream, and is not published again.
      */
     private boolean isNewer(String descriptor, Reading reading) {
-        return readings.merge(descriptor, reading, BMWCarDataVehicleHandler::latest) == reading;
-    }
-
-    private static Reading latest(Reading previous, Reading current) {
-        // an older reading or a copy keeps the previous one, so it is not published
-        return current.timestamp().isBefore(previous.timestamp()) || current.equals(previous) ? previous : current;
+        AtomicBoolean newer = new AtomicBoolean();
+        readings.compute(descriptor, (key, previous) -> {
+            // an older reading or a copy keeps the previous one, so it is not published
+            if (reading.timestamp().isBefore(previous.timestamp()) || reading.equals(previous)) {
+                return previous;
+            }
+            newer.set(true);
+            return reading;
+        });
+        return newer.get();
     }
 
     /**
