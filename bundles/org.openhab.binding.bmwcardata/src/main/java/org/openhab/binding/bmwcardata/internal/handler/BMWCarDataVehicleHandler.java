@@ -23,7 +23,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -58,6 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 
 /**
  * The {@link BMWCarDataVehicleHandler} publishes the telematic data of a vehicle, which is either pushed by the
@@ -76,11 +76,9 @@ public class BMWCarDataVehicleHandler extends BaseThingHandler {
     private @Nullable ScheduledFuture<?> propertiesJob;
     // states by channel id, to answer REFRESH commands without spending API requests
     private final Map<String, State> states = new ConcurrentHashMap<>();
-    // timestamps and values of the latest values by descriptor, to drop values older than already published ones and
-    // copies: the stream delivers many messages twice
-    private final Object descriptorLock = new Object();
-    private final Map<String, Instant> descriptorTimestamps = new ConcurrentHashMap<>();
-    private final Map<String, JsonElement> descriptorValues = new ConcurrentHashMap<>();
+    // the latest readings by descriptor, to drop values older than already published ones or copies: the stream
+    // delivers many messages twice, and a refresh after the stream delivers the same values again
+    private final Map<String, Reading> readings = new ConcurrentHashMap<>();
     // once the vehicle reports isPlugged, the plug state is no longer derived from the charging port status
     private volatile boolean pluggedReported;
     // a refresh or stream message of the account may still deliver data while the handler is disposed
@@ -160,7 +158,7 @@ public class BMWCarDataVehicleHandler extends BaseThingHandler {
             }
             Instant timestamp = parseTimestamp(value.timestamp);
             if (timestamp != null) {
-                if (!isNewer(descriptor, timestamp, value.value)) {
+                if (!isNewer(descriptor, new Reading(timestamp, normalize(value.value), value.unit))) {
                     continue;
                 }
                 if (newest == null || timestamp.isAfter(newest)) {
@@ -303,24 +301,45 @@ public class BMWCarDataVehicleHandler extends BaseThingHandler {
     }
 
     /**
-     * Records the value when it is newer than the last one of the descriptor. A value with the same timestamp and value
-     * as the last one is a copy, which the stream delivers for many messages, and is not published again.
+     * The latest value of a descriptor, to drop older values and copies.
+     *
+     * @param timestamp when the vehicle reported the value
+     * @param value the value, normalized by {@link #normalize(JsonElement)}
+     * @param unit the unit, if any
      */
-    private boolean isNewer(String descriptor, Instant timestamp, @Nullable JsonElement value) {
-        synchronized (descriptorLock) {
-            Instant previous = descriptorTimestamps.get(descriptor);
-            if (previous != null && (timestamp.isBefore(previous)
-                    || (timestamp.equals(previous) && Objects.equals(value, descriptorValues.get(descriptor))))) {
-                return false;
+    private record Reading(Instant timestamp, @Nullable Object value, @Nullable String unit) {
+    }
+
+    /**
+     * Records the reading when it is newer than the last one of the descriptor. A reading with the same timestamp,
+     * value and unit as the last one is a copy, which the stream delivers for many messages and a refresh delivers
+     * after the stream, and is not published again.
+     */
+    private boolean isNewer(String descriptor, Reading reading) {
+        return readings.merge(descriptor, reading, BMWCarDataVehicleHandler::latest) == reading;
+    }
+
+    private static Reading latest(Reading previous, Reading current) {
+        // an older reading or a copy keeps the previous one, so it is not published
+        return current.timestamp().isBefore(previous.timestamp()) || current.equals(previous) ? previous : current;
+    }
+
+    /**
+     * Normalizes a value for comparison: the REST API sends numbers and booleans as strings, e.g. {@code "200"}, the
+     * stream as JSON numbers and booleans, e.g. {@code 200}.
+     *
+     * @return a number as {@link BigDecimal} without trailing zeros, another primitive as its text, or the element
+     */
+    private static @Nullable Object normalize(@Nullable JsonElement value) {
+        if (value instanceof JsonPrimitive primitive) {
+            String text = primitive.getAsString().strip();
+            try {
+                return new BigDecimal(text).stripTrailingZeros();
+            } catch (NumberFormatException e) {
+                return text;
             }
-            descriptorTimestamps.put(descriptor, timestamp);
-            if (value != null) {
-                descriptorValues.put(descriptor, value);
-            } else {
-                descriptorValues.remove(descriptor);
-            }
-            return true;
         }
+        return value;
     }
 
     private void publish(String channelUid, State state) {
