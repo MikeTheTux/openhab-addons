@@ -241,6 +241,7 @@ When a reading finds several new entries, `last-event` and `last-event-time` sho
 A rule triggered by `event` or `event-text` should therefore take the entry from its payload (`receivedEvent`), not from `last-event`.
 Use `event` to react to a specific entry: its payload does not depend on the language.
 The `event-text` payload is meant for notifications and logs; its text follows the language of openHAB and its time is in the time zone of openHAB.
+In the Main UI, the `event` trigger offers the known events by name.
 
 The battery keeps several weeks of entries per unit and hands them out in pages of 20, newest first.
 Each request returns the next older page, and only after a pause of about two minutes does the battery start at the newest page again.
