@@ -20,6 +20,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.bydbatterybox.internal.handler.BydBatteryBoxHandler;
 import org.openhab.core.i18n.LocaleProvider;
+import org.openhab.core.i18n.TimeZoneProvider;
 import org.openhab.core.i18n.TranslationProvider;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingTypeUID;
@@ -46,14 +47,17 @@ public class BydBatteryBoxHandlerFactory extends BaseThingHandlerFactory {
 
     private final TranslationProvider i18nProvider;
     private final LocaleProvider localeProvider;
+    private final TimeZoneProvider timeZoneProvider;
     private final Bundle bundle;
 
     @Activate
     public BydBatteryBoxHandlerFactory(@Reference TranslationProvider i18nProvider,
-            @Reference LocaleProvider localeProvider, ComponentContext componentContext) {
+            @Reference LocaleProvider localeProvider, @Reference TimeZoneProvider timeZoneProvider,
+            ComponentContext componentContext) {
         super.activate(componentContext);
         this.i18nProvider = i18nProvider;
         this.localeProvider = localeProvider;
+        this.timeZoneProvider = timeZoneProvider;
         this.bundle = componentContext.getBundleContext().getBundle();
     }
 
@@ -65,7 +69,7 @@ public class BydBatteryBoxHandlerFactory extends BaseThingHandlerFactory {
     @Override
     protected @Nullable ThingHandler createHandler(Thing thing) {
         if (THING_TYPE_HV_PREMIUM.equals(thing.getThingTypeUID())) {
-            return new BydBatteryBoxHandler(thing, i18nProvider, localeProvider, bundle);
+            return new BydBatteryBoxHandler(thing, i18nProvider, localeProvider, timeZoneProvider, bundle);
         }
         return null;
     }

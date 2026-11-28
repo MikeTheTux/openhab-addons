@@ -76,6 +76,7 @@ public class BydBatteryBoxBindingConstants {
     public static final String CHANNEL_LAST_EVENT = "last-event";
     public static final String CHANNEL_LAST_EVENT_TIME = "last-event-time";
     public static final String CHANNEL_EVENT = "event";
+    public static final String CHANNEL_EVENT_TEXT = "event-text";
     public static final String CHANNEL_BMU_CLOCK_OFFSET = "bmu-clock-offset";
     public static final String CHANNEL_LAST_DETAIL_UPDATE = "last-detail-update";
 

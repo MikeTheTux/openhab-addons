@@ -226,14 +226,21 @@ Cell and sensor numbers count from 1 within the module.
 
 Updated every `eventLogInterval` from the logs of the BMU and of each tower.
 
-| Channel           | Type     | Description                                                                                                |
-|-------------------|----------|------------------------------------------------------------------------------------------------------------|
-| `last-event`      | String   | Newest log entry, e.g. `BMS 1: Stop discharging (SoC 7 %, 305.3 V, 0.0 A)`                                 |
-| `last-event-time` | DateTime | Time of the newest log entry                                                                               |
-| `event`           | Trigger  | Fired once for every new log entry, oldest first, with the source and event code as payload, e.g. `BMS1:7` |
+| Channel           | Type     | Description                                                                                                                                                             |
+|-------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `last-event`      | String   | Newest log entry with its reason where it has one, e.g. `BMS 1: Stop discharging` or `BMU: System status changed (Pre-charge → Active)`                                 |
+| `last-event-time` | DateTime | Time of the newest log entry                                                                                                                                            |
+| `event`           | Trigger  | Fired once for every new log entry, oldest first, with the source and event code as payload, e.g. `BMS1:7`                                                              |
+| `event-text`      | Trigger  | Advanced. Fired after `event` for the same entry, with its time, text and recorded values, e.g. `2026-11-28 15:28:14 BMS 1: Stop discharging (SoC 7 %, 305.3 V, 0.0 A)` |
 
-When a reading finds several new entries, `last-event` and `last-event-time` show the newest of them, while the trigger fires once for each entry.
-A rule triggered by `event` should therefore take the entry from its payload (`receivedEvent`), not from `last-event`.
+`last-event` leaves out the values the battery records with an entry, such as the state of charge, voltage and current.
+It therefore takes only a limited number of different texts and is suitable for persistence and for timeline charts.
+The recorded values are part of the `event-text` payload.
+
+When a reading finds several new entries, `last-event` and `last-event-time` show the newest of them, while the triggers fire once for each entry.
+A rule triggered by `event` or `event-text` should therefore take the entry from its payload (`receivedEvent`), not from `last-event`.
+Use `event` to react to a specific entry: its payload does not depend on the language.
+The `event-text` payload is meant for notifications and logs; its text follows the language of openHAB and its time is in the time zone of openHAB.
 
 The battery keeps several weeks of entries per unit and hands them out in pages of 20, newest first.
 Each request returns the next older page, and only after a pause of about two minutes does the battery start at the newest page again.
@@ -299,7 +306,7 @@ end
 
 rule "Battery event"
 when
-    Channel "bydbatterybox:hv-premium:home:events#event" triggered
+    Channel "bydbatterybox:hv-premium:home:events#event-text" triggered
 then
     logInfo("battery", "Battery event {}", receivedEvent)
 end

@@ -25,8 +25,11 @@ import java.net.ServerSocket;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,8 +55,10 @@ import org.openhab.binding.bydbatterybox.internal.dto.EventRecord;
 import org.openhab.binding.bydbatterybox.internal.protocol.BydClient;
 import org.openhab.core.config.core.Configuration;
 import org.openhab.core.i18n.LocaleProvider;
+import org.openhab.core.i18n.TimeZoneProvider;
 import org.openhab.core.i18n.TranslationProvider;
 import org.openhab.core.library.types.QuantityType;
+import org.openhab.core.library.types.StringType;
 import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.Channel;
 import org.openhab.core.thing.ChannelGroupUID;
@@ -83,6 +88,7 @@ class BydBatteryBoxHandlerTest {
     private @Mock @NonNullByDefault({}) ThingHandlerCallback callback;
     private @Mock @NonNullByDefault({}) TranslationProvider i18nProvider;
     private @Mock @NonNullByDefault({}) LocaleProvider localeProvider;
+    private @Mock @NonNullByDefault({}) TimeZoneProvider timeZoneProvider;
     private @Mock @NonNullByDefault({}) Bundle bundle;
 
     private @Nullable BydBatteryBoxHandler handler;
@@ -123,8 +129,8 @@ class BydBatteryBoxHandlerTest {
         properties.putAll(parameters);
         Thing thing = ThingBuilder.create(THING_TYPE_HV_PREMIUM, "test")
                 .withConfiguration(new Configuration(properties)).withChannels(channels).build();
-        BydBatteryBoxHandler localHandler = new BydBatteryBoxHandler(thing, i18nProvider, localeProvider, bundle,
-                sleeper);
+        BydBatteryBoxHandler localHandler = new BydBatteryBoxHandler(thing, i18nProvider, localeProvider,
+                timeZoneProvider, bundle, sleeper);
         localHandler.setCallback(callback);
         handler = localHandler;
         return localHandler;
@@ -355,13 +361,15 @@ class BydBatteryBoxHandlerTest {
                         "tower-1-module-4#cell-voltage-01")
                 .map(id -> ChannelBuilder.create(new ChannelUID(thingUID, id)).build()).toList();
         // the framework would create all channels of a group; one channel per group is enough to show what is
-        // added: a missing channel of module 1 and a missing status channel (e.g. lost by an earlier version)
+        // added: a missing channel of module 1, a missing status channel (e.g. lost by an earlier version) and a
+        // channel that a later version added to the events group
         when(callback.createChannelBuilders(any(), any())).thenAnswer(invocation -> {
             ChannelGroupUID group = invocation.getArgument(0);
             return switch (group.getId()) {
                 case "tower-1-module-1" -> List.of(ChannelBuilder.create(new ChannelUID(group, "cell-voltage-01")));
                 case "status" -> List.of(ChannelBuilder.create(new ChannelUID(group, "state-of-charge")),
                         ChannelBuilder.create(new ChannelUID(group, "voltage")));
+                case "events" -> List.of(ChannelBuilder.create(new ChannelUID(group, "event-text")));
                 default -> List.of();
             };
         });
@@ -370,7 +378,7 @@ class BydBatteryBoxHandlerTest {
         localHandler.initialize();
 
         Set<String> expected = Set.of("status#voltage", "status#state-of-charge", "tower-1#voltage",
-                "tower-1-module-3#cell-voltage-32", "tower-1-module-1#cell-voltage-01");
+                "tower-1-module-3#cell-voltage-32", "tower-1-module-1#cell-voltage-01", "events#event-text");
         verify(callback, timeout(FIRST_CYCLE_TIMEOUT_MILLIS).atLeastOnce()).thingUpdated(argThat(thing -> expected
                 .equals(thing.getChannels().stream().map(c -> c.getUID().getId()).collect(Collectors.toSet()))));
     }
@@ -396,6 +404,8 @@ class BydBatteryBoxHandlerTest {
         ChannelUID lastEvent = new ChannelUID(thingUID, GROUP_EVENTS, CHANNEL_LAST_EVENT);
         ChannelUID lastEventTime = new ChannelUID(thingUID, GROUP_EVENTS, CHANNEL_LAST_EVENT_TIME);
         ChannelUID event = new ChannelUID(thingUID, GROUP_EVENTS, CHANNEL_EVENT);
+        ChannelUID eventText = new ChannelUID(thingUID, GROUP_EVENTS, CHANNEL_EVENT_TEXT);
+        when(timeZoneProvider.getTimeZone()).thenReturn(ZoneOffset.UTC);
 
         localHandler.publishEvents(List.of(older, newer), newer, Duration.ZERO);
 
@@ -403,7 +413,27 @@ class BydBatteryBoxHandlerTest {
         inOrder.verify(callback).stateUpdated(eq(lastEvent), argThat(state -> state.toString().startsWith("BMS 1: ")));
         inOrder.verify(callback).stateUpdated(eq(lastEventTime), any());
         inOrder.verify(callback).channelTriggered(any(), eq(event), eq("BMU:32"));
+        inOrder.verify(callback).channelTriggered(any(), eq(eventText), startsWith("2026-11-16 07:42:02 BMU: "));
         inOrder.verify(callback).channelTriggered(any(), eq(event), eq("BMS1:38"));
+        inOrder.verify(callback).channelTriggered(any(), eq(eventText), startsWith("2026-11-16 07:42:04 BMS 1: "));
+    }
+
+    @Test
+    void eventTextCarriesTheCorrectedTimeAndTheRecordedValues() {
+        BydBatteryBoxHandler localHandler = createHandler(1);
+        // data of a record of an HVS 7.7 with SoC 7 %; the battery clock is 16 min ahead, openHAB runs in CET. The
+        // translation provider is a mock, so the event name is the fallback text
+        EventRecord stopCharging = new EventRecord(1, 5, LocalDateTime.of(2026, 11, 16, 14, 44, 14),
+                HexFormat.of().parseHex("000000000000000001070a170c1d0cfbff9d0c910c1a16"));
+        ChannelUID lastEvent = new ChannelUID(localHandler.getThing().getUID(), GROUP_EVENTS, CHANNEL_LAST_EVENT);
+        ChannelUID eventText = new ChannelUID(localHandler.getThing().getUID(), GROUP_EVENTS, CHANNEL_EVENT_TEXT);
+        when(timeZoneProvider.getTimeZone()).thenReturn(ZoneId.of("Europe/Berlin"));
+
+        localHandler.publishEvents(List.of(stopCharging), stopCharging, Duration.ofMinutes(16));
+
+        verify(callback).stateUpdated(lastEvent, new StringType("BMS 1: Event 5"));
+        verify(callback).channelTriggered(any(), eq(eventText),
+                eq("2026-11-16 15:28:14 BMS 1: Event 5 (SoC 7 %, 309.5 V, -0.5 A)"));
     }
 
     @Test

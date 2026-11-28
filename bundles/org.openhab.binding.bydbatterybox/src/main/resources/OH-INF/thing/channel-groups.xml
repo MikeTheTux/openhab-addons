@@ -346,13 +346,16 @@
 		<channels>
 			<channel id="last-event" typeId="status-text">
 				<label>Last Event</label>
-				<description>Newest entry of the event logs of the BMU and the towers.</description>
+				<description>Newest entry of the event logs of the BMU and the towers, with its reason where the entry has
+					one, but
+					without the values recorded with it.</description>
 			</channel>
 			<channel id="last-event-time" typeId="timestamp">
 				<label>Last Event Time</label>
 				<description>Time of the newest event, corrected by the offset of the battery clock.</description>
 			</channel>
 			<channel id="event" typeId="event"/>
+			<channel id="event-text" typeId="event-text"/>
 		</channels>
 	</channel-group-type>
 

@@ -236,4 +236,14 @@
 		<event/>
 	</channel-type>
 
+	<channel-type id="event-text" advanced="true">
+		<kind>trigger</kind>
+		<label>Event Text</label>
+		<description>Fired once for every new event log entry, after the event channel. The payload is the time, the
+			source,
+			the event and the values recorded with it, e.g. 2026-11-28 14:28:14 BMS 1: Stop discharging (SoC 7 %,
+			305.3 V, 0.0 A).</description>
+		<event/>
+	</channel-type>
+
 </thing:thing-descriptions>

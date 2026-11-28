@@ -103,9 +103,9 @@ class BydTextsTest {
     void bmsEventDetailsOfSocCalibrationStopAndAdditionalInfo() {
         // recorded on an HVS 7.7 on 2026-11-16 and 2026-11-22
         assertEquals("BMS 1: SoC calibration stop (SoC 9 %, 309.5 V, -0.5 A)",
-                texts.event(event(1, 10, "000000000000000001090a170c1d0cfbff9d0c910c1a16")));
+                texts.eventWithValues(event(1, 10, "000000000000000001090a170c1d0cfbff9d0c910c1a16")));
         assertEquals("BMS 1: Events additional info (SoC 5 %, 307.2 V, 0.0 A)",
-                texts.event(event(1, 21, "000000000000000018055e000c050c00003205011e0000")));
+                texts.eventWithValues(event(1, 21, "000000000000000018055e000c050c00003205011e0000")));
         assertTrue(missingKeys.isEmpty(), () -> "missing i18n keys " + missingKeys);
     }
 
@@ -129,10 +129,13 @@ class BydTextsTest {
     void bmsEvents() throws BydCommunicationException {
         List<EventRecord> records = BydDecoder.decodeEventLog(1, Fixtures.chunkPayloads("event-bms1", 5));
 
-        assertEquals("BMS 1: Stop discharging (SoC 7 %, 305.3 V, 0.0 A)", texts.event(records.get(0)));
-        assertEquals("BMS 1: Start charging (SoC 10 %, 311.3 V, -1.8 A)", texts.event(records.get(4)));
-        assertEquals("BMS 1: SoC calibration stop (SoC 9 %, 309.5 V, -0.5 A)", texts.event(records.get(8)));
-        assertEquals("BMS 1: Pre-charge successful (SoC 5 %, 306.7 V, 0.0 A)", texts.event(records.get(16)));
+        assertEquals("BMS 1: Stop discharging (SoC 7 %, 305.3 V, 0.0 A)", texts.eventWithValues(records.get(0)));
+        assertEquals("BMS 1: Start charging (SoC 10 %, 311.3 V, -1.8 A)", texts.eventWithValues(records.get(4)));
+        assertEquals("BMS 1: SoC calibration stop (SoC 9 %, 309.5 V, -0.5 A)", texts.eventWithValues(records.get(8)));
+        assertEquals("BMS 1: Pre-charge successful (SoC 5 %, 306.7 V, 0.0 A)", texts.eventWithValues(records.get(16)));
+        // without the recorded values, the text takes a limited number of values
+        assertEquals("BMS 1: Stop discharging", texts.event(records.get(0)));
+        assertEquals("BMS 1: Start charging", texts.event(records.get(4)));
         assertTrue(missingKeys.isEmpty(), () -> "missing i18n keys " + missingKeys);
     }
 
@@ -145,6 +148,8 @@ class BydTextsTest {
         assertEquals("BMU: System status changed (Pre-charge → Active)", texts.event(records.get(2)));
         assertEquals("BMU: System status changed (Standby → Inactive)", texts.event(records.get(9)));
         assertEquals("BMU: Functional safety info", texts.event(records.get(10)));
+        // the reason belongs to both texts
+        assertEquals("BMU: System status changed (Pre-charge → Active)", texts.eventWithValues(records.get(2)));
         assertTrue(missingKeys.isEmpty(), () -> "missing i18n keys " + missingKeys);
     }
 

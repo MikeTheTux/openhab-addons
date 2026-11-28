@@ -121,40 +121,64 @@ class BydTexts {
                 : source.get("event.source.bms", "BMS {0}", unit);
     }
 
+    /**
+     * @return the source, the event and its reason where the entry has one, e.g. a status change; the values recorded
+     *         with the entry are left out, so that the text takes a limited number of values
+     */
     String event(EventRecord record) {
-        String text = source.get("event.code." + record.getCode(), "Event {0}", record.getCode());
-        String details = eventDetails(record);
-        return details.isEmpty() ? eventSource(record.getUnit()) + ": " + text
-                : eventSource(record.getUnit()) + ": " + text + " (" + details + ")";
+        return withDetails(eventName(record), eventReason(record));
     }
 
-    private String eventDetails(EventRecord record) {
-        int code = record.getCode();
-        if (record.isBmu()) {
-            if (code == EVENT_SYSTEM_STATUS_CHANGED) {
-                return systemState(record.u8(1)) + " → " + systemState(record.u8(0));
-            }
-            if (code == EVENT_EVENTS_RECORD) {
-                String change = record.u8(0) == 0 ? source.get("event.disappeared", "disappeared")
-                        : source.get("event.appeared", "appeared");
-                int error = record.u8(1);
-                if (error == EVENTS_RECORD_WARNINGS) {
-                    // the warning bitmap uses the bit numbers of the error enumeration
-                    return bitTexts("bmu.error.", BMU_ERRORS, record.u16BigEndian(2)) + ", " + change;
-                }
-                return error < BMU_ERRORS.length ? source.get("bmu.error." + error, BMU_ERRORS[error]) + ", " + change
-                        : change;
-            }
+    /**
+     * @return the source, the event, its reason and the values recorded with the entry
+     */
+    String eventWithValues(EventRecord record) {
+        String reason = eventReason(record);
+        String values = eventValues(record);
+        return withDetails(eventName(record),
+                reason.isEmpty() || values.isEmpty() ? reason + values : reason + ", " + values);
+    }
+
+    private String eventName(EventRecord record) {
+        return eventSource(record.getUnit()) + ": "
+                + source.get("event.code." + record.getCode(), "Event {0}", record.getCode());
+    }
+
+    private static String withDetails(String name, String details) {
+        return details.isEmpty() ? name : name + " (" + details + ")";
+    }
+
+    private String eventReason(EventRecord record) {
+        if (!record.isBmu()) {
             return "";
         }
-        if (BMS_STANDARD_LAYOUT.contains(code)) {
-            // the BMS records use little-endian values
-            BigDecimal voltage = BigDecimal.valueOf(record.u16LittleEndian(11), 1);
-            BigDecimal current = BigDecimal.valueOf((short) record.u16LittleEndian(15), 1);
-            return source.get("event.details.bms", "SoC {0} %, {1} V, {2} A", String.valueOf(record.u8(9)),
-                    voltage.toPlainString(), current.toPlainString());
+        int code = record.getCode();
+        if (code == EVENT_SYSTEM_STATUS_CHANGED) {
+            return systemState(record.u8(1)) + " → " + systemState(record.u8(0));
+        }
+        if (code == EVENT_EVENTS_RECORD) {
+            String change = record.u8(0) == 0 ? source.get("event.disappeared", "disappeared")
+                    : source.get("event.appeared", "appeared");
+            int error = record.u8(1);
+            if (error == EVENTS_RECORD_WARNINGS) {
+                // the warning bitmap uses the bit numbers of the error enumeration
+                return bitTexts("bmu.error.", BMU_ERRORS, record.u16BigEndian(2)) + ", " + change;
+            }
+            return error < BMU_ERRORS.length ? source.get("bmu.error." + error, BMU_ERRORS[error]) + ", " + change
+                    : change;
         }
         return "";
+    }
+
+    private String eventValues(EventRecord record) {
+        if (record.isBmu() || !BMS_STANDARD_LAYOUT.contains(record.getCode())) {
+            return "";
+        }
+        // the BMS records use little-endian values
+        BigDecimal voltage = BigDecimal.valueOf(record.u16LittleEndian(11), 1);
+        BigDecimal current = BigDecimal.valueOf((short) record.u16LittleEndian(15), 1);
+        return source.get("event.details.bms", "SoC {0} %, {1} V, {2} A", String.valueOf(record.u8(9)),
+                voltage.toPlainString(), current.toPlainString());
     }
 
     private String systemState(int state) {

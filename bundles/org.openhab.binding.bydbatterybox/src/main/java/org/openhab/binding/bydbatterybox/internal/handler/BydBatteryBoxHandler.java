@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -53,6 +54,7 @@ import org.openhab.binding.bydbatterybox.internal.protocol.BydCommunicationExcep
 import org.openhab.binding.bydbatterybox.internal.protocol.BydConnection;
 import org.openhab.core.common.ThreadPoolManager;
 import org.openhab.core.i18n.LocaleProvider;
+import org.openhab.core.i18n.TimeZoneProvider;
 import org.openhab.core.i18n.TranslationProvider;
 import org.openhab.core.library.types.DateTimeType;
 import org.openhab.core.library.types.DecimalType;
@@ -111,6 +113,7 @@ public class BydBatteryBoxHandler extends BaseThingHandler {
      * Application and phase settings, in the order of BYD's configuration tool. Confirmed on an HVS by changing both
      * settings there and reading the values before and after.
      */
+    private static final DateTimeFormatter EVENT_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String[] APPLICATIONS = { "Off Grid", "On Grid", "Backup" };
     private static final String[] PHASES = { "Single-phase", "Three-phase" };
 
@@ -118,6 +121,7 @@ public class BydBatteryBoxHandler extends BaseThingHandler {
     private final ScheduledExecutorService executor = ThreadPoolManager.getScheduledPool(BINDING_ID);
     private final TranslationProvider i18nProvider;
     private final LocaleProvider localeProvider;
+    private final TimeZoneProvider timeZoneProvider;
     private final Bundle bundle;
     private final BydClient.Sleeper sleeper;
     private final BydTexts texts;
@@ -155,15 +159,16 @@ public class BydBatteryBoxHandler extends BaseThingHandler {
     }
 
     public BydBatteryBoxHandler(Thing thing, TranslationProvider i18nProvider, LocaleProvider localeProvider,
-            Bundle bundle) {
-        this(thing, i18nProvider, localeProvider, bundle, Thread::sleep);
+            TimeZoneProvider timeZoneProvider, Bundle bundle) {
+        this(thing, i18nProvider, localeProvider, timeZoneProvider, bundle, Thread::sleep);
     }
 
-    BydBatteryBoxHandler(Thing thing, TranslationProvider i18nProvider, LocaleProvider localeProvider, Bundle bundle,
-            BydClient.Sleeper sleeper) {
+    BydBatteryBoxHandler(Thing thing, TranslationProvider i18nProvider, LocaleProvider localeProvider,
+            TimeZoneProvider timeZoneProvider, Bundle bundle, BydClient.Sleeper sleeper) {
         super(thing);
         this.i18nProvider = i18nProvider;
         this.localeProvider = localeProvider;
+        this.timeZoneProvider = timeZoneProvider;
         this.bundle = bundle;
         this.sleeper = sleeper;
         this.texts = new BydTexts(this::text);
@@ -542,18 +547,26 @@ public class BydBatteryBoxHandler extends BaseThingHandler {
 
     /**
      * Updates the last event channels to the newest entry before triggering, so that they are current when rules run.
-     * With several new entries, the channels describe the newest one; the trigger payload identifies each entry.
+     * With several new entries, the channels describe the newest one; the trigger payloads describe each entry.
      */
     void publishEvents(List<EventRecord> fresh, @Nullable EventRecord newest, Duration clockOffset) {
         if (newest != null) {
             update(GROUP_EVENTS, CHANNEL_LAST_EVENT, new StringType(texts.event(newest)));
-            Instant time = newest.getTimestamp().toInstant(ZoneOffset.UTC).minus(clockOffset);
-            update(GROUP_EVENTS, CHANNEL_LAST_EVENT_TIME, new DateTimeType(time));
+            update(GROUP_EVENTS, CHANNEL_LAST_EVENT_TIME, new DateTimeType(eventTime(newest, clockOffset)));
         }
         for (EventRecord record : fresh) {
             triggerChannel(new ChannelUID(thing.getUID(), GROUP_EVENTS, CHANNEL_EVENT),
                     (record.isBmu() ? "BMU" : "BMS" + record.getUnit()) + ":" + record.getCode());
+            String time = EVENT_TIME_FORMAT
+                    .format(eventTime(record, clockOffset).atZone(timeZoneProvider.getTimeZone()));
+            triggerChannel(new ChannelUID(thing.getUID(), GROUP_EVENTS, CHANNEL_EVENT_TEXT),
+                    time + " " + texts.eventWithValues(record));
         }
+    }
+
+    /** The battery clock has no time zone and is not synchronized; its offset is read in the same session. */
+    private static Instant eventTime(EventRecord record, Duration clockOffset) {
+        return record.getTimestamp().toInstant(ZoneOffset.UTC).minus(clockOffset);
     }
 
     private void applyIdentity(PollContext context, SystemInfo info) {
