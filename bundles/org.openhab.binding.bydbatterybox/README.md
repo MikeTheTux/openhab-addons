@@ -237,6 +237,10 @@ Updated every `eventLogInterval` from the logs of the BMU and of each tower.
 It therefore takes only a limited number of different texts and is suitable for persistence and for timeline charts.
 The recorded values are part of the `event-text` payload.
 
+Entries with a reason are status changes of the BMU, events records (the error or the warnings that appeared or disappeared), power off and date/time calibration.
+The reasons of power off and date/time calibration and the BMU errors from `Address registration failed` on have not yet been seen in the log of a real battery.
+If you see one, please report it in the community thread.
+
 When a reading finds several new entries, `last-event` and `last-event-time` show the newest of them, while the triggers fire once for each entry.
 A rule triggered by `event` or `event-text` should therefore take the entry from its payload (`receivedEvent`), not from `last-event`.
 Use `event` to react to a specific entry: its payload does not depend on the language.

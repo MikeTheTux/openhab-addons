@@ -64,21 +64,43 @@ class BydTexts {
             "Pre-charge failed", "Heater failure", "Cooling failure", "Cell monitoring balancing failure",
             "Cell failure", "Circuit board temperature sensor failure", "Functional safety failure" };
 
-    /** Error enumeration of BMU "events record" entries. */
+    /**
+     * Error enumeration of BMU "events record" entries. Values 16 to 24 are not confirmed by a recorded entry; 23 marks
+     * an entry with a warning bitmap, whose bits have the meaning of values 0 to 15.
+     */
     private static final String[] BMU_ERRORS = { "Total voltage too high", "Total voltage too low",
             "Cell voltage too high", "Cell voltage too low", "Voltage sensor fault", "Temperature sensor fault",
             "Cell discharging temperature too high", "Cell discharging temperature too low",
             "Cell charging temperature too high", "Cell charging temperature too low", "Discharging overcurrent",
             "Charging overcurrent", "Major loop fault", "Short circuit warning", "Battery imbalance",
-            "Current sensor fault" };
+            "Current sensor fault", "Address registration failed", "Loading the parameters failed", "Pre-charge failed",
+            "BMU firmware update failed", "BMS firmware update failed", "Internal communication failed",
+            "Inverter communication timeout", "BMS warning", "Air switch abnormal" };
+
+    /** Reasons of BMU "power off" entries, starting at 1; not confirmed by a recorded entry. */
+    private static final String[] BMU_POWER_OFF_REASONS = { "LED button pressed", "Timer expired",
+            "Requested by the BMS", "Requested by the inverter", "Black start not allowed by the inverter",
+            "SMA enable signal lost", "Reset requested by the inverter" };
+
+    /** Reasons of BMS "power off" entries, starting at 1; not confirmed by a recorded entry. */
+    private static final String[] BMS_POWER_OFF_REASONS = { "LED button pressed", "Requested by the BMU",
+            "BMU off and communication with the BMU failed", "Communication failed for 30 minutes",
+            "Requested by the LV BMU", "Switched off with the LED button", "Communication with the BMU failed",
+            "Battery undervoltage" };
+
+    /** Sources of BMU "date/time calibration" entries; not confirmed by a recorded entry. */
+    private static final String[] TIME_SOURCES = { "Set by the configuration tool", "Set by the inverter",
+            "Set from the internet" };
 
     private static final String[] SYSTEM_STATES = { "Standby", "Inactive", "Black start", "Active", "Fault", "Updating",
             "Shutdown", "Pre-charge", "Battery check", "Address assignment", "Loading parameters", "Initialisation" };
 
+    private static final int EVENT_POWER_OFF = 1;
     private static final int EVENT_EVENTS_RECORD = 2;
     /** Error number of BMU "events record" entries that carry a warning bitmap instead of a single error. */
     private static final int EVENTS_RECORD_WARNINGS = 23;
     private static final int EVENT_SYSTEM_STATUS_CHANGED = 32;
+    private static final int EVENT_DATE_TIME_CALIBRATION = 111;
     /** BMS entries whose data use the common layout (warnings, faults, switches, SoC, voltages, current, cells). */
     private static final Set<Integer> BMS_STANDARD_LAYOUT = Set.of(2, 3, 4, 5, 6, 7, 8, 10, 13, 14, 16, 19, 21);
 
@@ -149,25 +171,56 @@ class BydTexts {
     }
 
     private String eventReason(EventRecord record) {
-        if (!record.isBmu()) {
-            return "";
-        }
         int code = record.getCode();
-        if (code == EVENT_SYSTEM_STATUS_CHANGED) {
-            return systemState(record.u8(1)) + " → " + systemState(record.u8(0));
+        if (record.isBmu()) {
+            return switch (code) {
+                case EVENT_POWER_OFF ->
+                    record.u8(0) == 0 ? "" : numbered("bmu.power-off.", BMU_POWER_OFF_REASONS, 1, record.u8(0));
+                case EVENT_EVENTS_RECORD -> bmuEventsRecord(record);
+                case EVENT_SYSTEM_STATUS_CHANGED -> systemState(record.u8(1)) + " → " + systemState(record.u8(0));
+                case EVENT_DATE_TIME_CALIBRATION -> numbered("bmu.time-source.", TIME_SOURCES, 0, record.u8(0));
+                default -> "";
+            };
         }
-        if (code == EVENT_EVENTS_RECORD) {
-            String change = record.u8(0) == 0 ? source.get("event.disappeared", "disappeared")
-                    : source.get("event.appeared", "appeared");
-            int error = record.u8(1);
-            if (error == EVENTS_RECORD_WARNINGS) {
-                // the warning bitmap uses the bit numbers of the error enumeration
-                return bitTexts("bmu.error.", BMU_ERRORS, record.u16BigEndian(2)) + ", " + change;
-            }
-            return error < BMU_ERRORS.length ? source.get("bmu.error." + error, BMU_ERRORS[error]) + ", " + change
-                    : change;
+        return switch (code) {
+            case EVENT_POWER_OFF ->
+                record.u8(1) == 0 ? "" : numbered("bms.power-off.", BMS_POWER_OFF_REASONS, 1, record.u8(1));
+            case EVENT_EVENTS_RECORD -> bmsEventsRecord(record);
+            default -> "";
+        };
+    }
+
+    private String bmuEventsRecord(EventRecord record) {
+        String change = record.u8(0) == 0 ? source.get("event.disappeared", "disappeared")
+                : source.get("event.appeared", "appeared");
+        int error = record.u8(1);
+        if (error == EVENTS_RECORD_WARNINGS) {
+            // the warning bitmap uses the bit numbers of the error enumeration
+            return bitTexts("bmu.error.", BMU_ERRORS, record.u16BigEndian(2)) + ", " + change;
         }
-        return "";
+        return error < BMU_ERRORS.length ? source.get("bmu.error." + error, BMU_ERRORS[error]) + ", " + change : change;
+    }
+
+    /**
+     * The warning and fault words of BMS entries have the meaning of the tower warning and error words of the
+     * measurement buffer, but little-endian byte order. An entry without warnings and faults has no reason.
+     */
+    private String bmsEventsRecord(EventRecord record) {
+        LinkedHashSet<String> texts = new LinkedHashSet<>(
+                bitTextList("warning.bit.", WARNING_BITS, record.u16LittleEndian(0) | record.u16LittleEndian(2)));
+        texts.addAll(bitTextList("warning3.bit.", WARNING3_BITS, record.u16LittleEndian(4)));
+        texts.addAll(bitTextList("tower.error.bit.", TOWER_ERROR_BITS, record.u16LittleEndian(6)));
+        return String.join(", ", texts);
+    }
+
+    /**
+     * @param first the value of the first text
+     * @return the text of the value, or the value itself if it has no text
+     */
+    private String numbered(String keyPrefix, String[] defaults, int first, int value) {
+        int index = value - first;
+        return index >= 0 && index < defaults.length ? source.get(keyPrefix + value, defaults[index])
+                : source.get("event.reason.unknown", "Reason {0}", value);
     }
 
     private String eventValues(EventRecord record) {

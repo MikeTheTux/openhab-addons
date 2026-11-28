@@ -118,6 +118,54 @@ class BydTextsTest {
     }
 
     @Test
+    void bmuEventsRecordWithLaterErrors() {
+        assertEquals("BMU: Events record (Inverter communication timeout, appeared)",
+                texts.event(event(EventRecord.UNIT_BMU, 2, "0116" + "ff".repeat(21))));
+        assertEquals("BMU: Events record (Air switch abnormal, disappeared)",
+                texts.event(event(EventRecord.UNIT_BMU, 2, "0018" + "ff".repeat(21))));
+        assertEquals("BMU: Events record (disappeared)",
+                texts.event(event(EventRecord.UNIT_BMU, 2, "0019" + "ff".repeat(21))));
+        assertTrue(missingKeys.isEmpty(), () -> "missing i18n keys " + missingKeys);
+    }
+
+    @Test
+    void powerOffReasons() {
+        assertEquals("BMU: Power off (LED button pressed)",
+                texts.event(event(EventRecord.UNIT_BMU, 1, "01" + "00".repeat(22))));
+        assertEquals("BMU: Power off (Reset requested by the inverter)",
+                texts.event(event(EventRecord.UNIT_BMU, 1, "07" + "00".repeat(22))));
+        assertEquals("BMU: Power off", texts.event(event(EventRecord.UNIT_BMU, 1, "00".repeat(23))));
+        assertEquals("BMS 1: Power off (Battery undervoltage)", texts.event(event(1, 1, "0008" + "00".repeat(21))));
+        assertEquals("BMS 1: Power off (Reason 9)", texts.event(event(1, 1, "0009" + "00".repeat(21))));
+        assertTrue(missingKeys.isEmpty(), () -> "missing i18n keys " + missingKeys);
+    }
+
+    @Test
+    void dateTimeCalibrationSource() {
+        assertEquals("BMU: Date/time calibration (Set by the inverter)",
+                texts.event(event(EventRecord.UNIT_BMU, 111, "01" + "00".repeat(22))));
+        assertEquals("BMU: Date/time calibration (Set from the internet)",
+                texts.event(event(EventRecord.UNIT_BMU, 111, "02" + "00".repeat(22))));
+        assertTrue(missingKeys.isEmpty(), () -> "missing i18n keys " + missingKeys);
+    }
+
+    @Test
+    void bmsEventsRecordWithWarningsAndFaults() {
+        // recorded on an HVS with 2 towers: cell overvoltage warning while charging at SoC 99 %
+        EventRecord warning = event(1, 2, "040000000000000018636491089b08c5ff7a0d490d1615");
+        assertEquals("BMS 1: Events record (Cell overvoltage)", texts.event(warning));
+        assertEquals("BMS 1: Events record (Cell overvoltage, SoC 99 %, 219.3 V, -5.9 A)",
+                texts.eventWithValues(warning));
+        // the same entry without warnings, as recorded when the warning was cleared
+        assertEquals("BMS 1: Events record",
+                texts.event(event(1, 2, "000000000000000018636450084f086a00020dfb0c1715")));
+        // third warning word and fault word: current sensor failure (bit 15) and main relay failure (bit 8)
+        assertEquals("BMS 1: Events record (Current sensor failure, Main relay failure)",
+                texts.event(event(1, 2, "0000000000800001" + "00".repeat(15))));
+        assertTrue(missingKeys.isEmpty(), () -> "missing i18n keys " + missingKeys);
+    }
+
+    @Test
     void newEventCodesHaveTexts() {
         assertEquals("BMU: Firmware update failed", texts.event(event(EventRecord.UNIT_BMU, 103, "00".repeat(23))));
         assertEquals("BMU: Parameter table update finished",
